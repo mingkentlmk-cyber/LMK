@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>图片制作工具 - 优化增强版</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -25,12 +26,18 @@ body { font-family: 'Noto Sans SC', sans-serif; background: linear-gradient(145d
 .btn-fire { background: linear-gradient(180deg, #FF6B35, #D4380D); border: 1px solid #FF6B35; color: #fff; }
 .btn-neon-blue { background: linear-gradient(180deg, #00D4FF, #0099CC); border: 1px solid #00D4FF; color: #001a22; }
 .btn-glass { background: linear-gradient(180deg, #F5F5F5, #E0E0E0); border: 1px solid #F5F5F5; color: #1a1a1a; }
+.btn-batch { background: linear-gradient(180deg, #6366f1, #4f46e5); border: 1px solid #818cf8; color: #fff; }
+.btn-batch:hover { background: linear-gradient(180deg, #818cf8, #6366f1); border-color: #a5b4fc; }
 input[type="file"] { display: none; }
 input[type="color"] { width: 30px; height: 28px; border: 1px solid #555; border-radius: 4px; background: #2a2a2a; cursor: pointer; padding: 0; }
 input[type="range"] { width: 80px; accent-color: var(--gold); cursor: pointer; }
+input[type="range"]:disabled { opacity: 0.4; cursor: not-allowed; }
 input[type="number"] { width: 55px; padding: 4px 6px; background: #222; border: 1px solid #444; border-radius: 4px; color: var(--gold-light); font-size: 12px; text-align: center; font-family: monospace; }
 input[type="number"]:focus { outline: none; border-color: var(--gold); background: #333; color: #fff; }
 input[type="number"]:hover { border-color: #666; }
+input[type="date"] { width: 120px; padding: 4px 6px; background: #222; border: 1px solid #444; border-radius: 4px; color: var(--gold-light); font-size: 12px; font-family: monospace; }
+input[type="date"]:focus { outline: none; border-color: var(--gold); background: #333; color: #fff; }
+input:disabled { opacity: 0.5; cursor: not-allowed; }
 .workspace { display: flex; justify-content: center; align-items: flex-start; gap: 20px; max-width: 1400px; margin: 0 auto; }
 .workspace.layout-bottom { flex-direction: column; align-items: center; }
 .layout-bottom .canvas-container { margin-bottom: 20px; }
@@ -53,31 +60,24 @@ input[type="number"]:hover { border-color: #666; }
 .control-row .value-display { font-size: 11px; color: var(--gold-light); width: 35px; text-align: right; }
 .control-row .unit { font-size: 10px; color: #666; margin-left: 2px; }
 .object-list { max-height: 180px; overflow-y: auto; margin-top: 5px; }
-/* ======== 修改：图层列表项样式 ======== */
 .object-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; background: #252525; border-radius: 6px; margin-bottom: 5px; font-size: 11px; cursor: pointer; border: 1px solid #3a3a3a; transition: all 0.2s; position: relative; }
 .object-item:hover { border-color: #555; background: #2a2a2a; }
 .object-item.selected { border-color: var(--gold); background: #2a2a20; }
-/* 锁定状态 - 金色边框 + 灰色背景 */
 .object-item.locked-item { border-color: #D4AF37; background: linear-gradient(135deg, #3a3520 0%, #2a2815 100%); }
 .object-item.locked-item .layer-name { color: #aaa; }
-/* 隐藏状态 - 半透明 + 删除线 */
 .object-item.hidden-item { opacity: 0.4; }
 .object-item.hidden-item .layer-name { text-decoration: line-through; color: #777; }
-/* 锁定且隐藏 */
 .object-item.locked-item.hidden-item { border-color: #665020; background: linear-gradient(135deg, #252015 0%, #1a1810 100%); }
 .object-info { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
-/* 眼睛按钮 - 隐藏时更明显 */
 .eye-btn { background: #333; border: none; color: #888; cursor: pointer; font-size: 11px; padding: 3px 6px; border-radius: 4px; flex-shrink: 0; transition: all 0.2s; }
 .eye-btn:hover { background: #444; color: #fff; }
 .eye-btn.hidden-eye { background: #442222; color: #ff6666; border: 1px solid #663333; }
-/* 锁定按钮 - 锁定时更明显 */
 .lock-btn { background: #333; border: none; color: #666; cursor: pointer; font-size: 11px; padding: 3px 6px; border-radius: 4px; flex-shrink: 0; transition: all 0.2s; }
 .lock-btn:hover { background: #444; color: #fff; }
 .lock-btn.locked { background: linear-gradient(135deg, #D4AF37 0%, #8B7500 100%); color: #1a1a1a; border: 1px solid #FFD700; font-weight: bold; }
 .layer-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 2px 4px; border-radius: 2px; }
 .delete-btn { background: none; border: none; color: #555; cursor: pointer; font-size: 14px; padding: 2px 6px; border-radius: 4px; transition: all 0.2s; }
 .delete-btn:hover { background: #442222; color: #ff6b6b; }
-/* ======== 图标标签 ======== */
 .type-icon { font-size: 12px; margin-right: 2px; }
 .hint { font-size: 10px; color: #666; margin-top: 10px; padding: 8px; background: #1a1a1a; border-radius: 4px; line-height: 1.5; }
 .style-preset-row { display: flex; gap: 4px; margin-bottom: 6px; flex-wrap: wrap; }
@@ -86,12 +86,28 @@ input[type="number"]:hover { border-color: #666; }
 .align-row label { font-size: 11px; color: #999; margin-right: 5px; }
 .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--gold); color: var(--darker); padding: 10px 20px; border-radius: 8px; font-weight: 500; opacity: 0; transition: all 0.3s; z-index: 1000; pointer-events: none; }
 .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+.toast.error { background: #ef4444; color: #fff; }
+.toast.success { background: #22c55e; color: #fff; }
 .upload-panel { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(5px); }
 .upload-panel.show { display: flex; }
 .upload-panel-inner { background: #1a1a1a; border: 2px dashed #444; border-radius: 16px; padding: 40px; width: 90%; max-width: 400px; text-align: center; }
 .upload-panel-inner h3 { color: var(--gold); margin-bottom: 15px; }
 .upload-panel-buttons { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-top: 10px; }
 .upload-panel-buttons .btn { min-width: 150px; justify-content: center; }
+.locked-hint { background: #3a3520; border: 1px solid #D4AF37; border-radius: 6px; padding: 8px 12px; margin-bottom: 10px; font-size: 11px; color: #D4AF37; text-align: center; }
+.batch-panel { background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); border: 1px solid #4f46e5; border-radius: 8px; padding: 12px; margin-bottom: 10px; }
+.batch-panel h4 { color: #818cf8; font-size: 11px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+.batch-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.batch-row label { font-size: 11px; color: #a5b4fc; min-width: 50px; }
+.batch-row input[type="date"], .batch-row input[type="number"] { width: 100px; }
+.batch-row .btn { flex: 1; }
+.batch-preview { font-size: 10px; color: #6366f1; margin-top: 8px; padding: 6px; background: rgba(99, 102, 241, 0.1); border-radius: 4px; }
+.loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 2000; flex-direction: column; gap: 20px; }
+.loading-overlay.show { display: flex; }
+.loading-spinner { width: 50px; height: 50px; border: 4px solid #333; border-top: 4px solid #6366f1; border-radius: 50%; animation: spin 1s linear infinite; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+.loading-text { color: #fff; font-size: 14px; }
+.loading-progress { color: #818cf8; font-size: 12px; }
 @media (max-width: 900px) { .workspace { flex-direction: column; align-items: center; } .controls-panel { width: 100%; max-width: 600px; margin-top: 20px; } .toolbar { flex-direction: column; align-items: stretch; } .toolbar-group { border-right: none; border-bottom: 1px solid #444; padding: 10px 0; width: 100%; justify-content: center; } }
 </style>
 </head>
@@ -111,6 +127,7 @@ input[type="number"]:hover { border-color: #666; }
 </div>
 <div class="controls-panel" id="sidePanel">
 <div class="control-section"><h3>选中元素</h3><div id="selectedInfo" style="font-size: 11px; color: #999; padding: 5px 0; word-break: break-all;">未选中任何元素</div></div>
+<div id="lockedHint" class="locked-hint" style="display:none;">🔒 该元素已锁定，无法移动</div>
 <div class="control-section" id="transformControls" style="display:none;">
 <h3>变换</h3>
 <div class="control-row" id="textContentRow" style="display:none; margin-bottom: 10px;"><input type="text" id="textContentInput" placeholder="输入文字..." style="width:100%; padding:5px; background:#222; border:1px solid #444; color:#fff; border-radius:4px;" oninput="updateTextContent()"></div>
@@ -128,6 +145,14 @@ input[type="number"]:hover { border-color: #666; }
 <div class="control-row" style="margin-top:10px;"><label>字号</label><input type="range" id="fontSize" min="12" max="200" value="48" oninput="updateText('fontSize')"><input type="number" id="fontSizeInput" value="48" min="12" max="200" oninput="inputSyncSlider('fontSize')" onchange="updateTextFromInput('fontSize')" onfocus="this.select()"><span class="unit">px</span></div>
 <div class="control-row"><label>颜色</label><input type="color" id="textColor" value="#D4AF37" onchange="updateTextColor()"></div>
 </div>
+<div class="batch-panel">
+<h4>📦 批量生成（透明PNG）</h4>
+<div class="batch-row"><label>开始日期</label><input type="date" id="batchStartDate" value="2026-01-01"></div>
+<div class="batch-row"><label>结束日期</label><input type="date" id="batchEndDate" value="2026-01-30"></div>
+<div class="batch-row"><label>每日数量</label><input type="number" id="batchCount" value="4" min="1" max="100"></div>
+<div class="batch-row"><button class="btn btn-batch" id="batchGenerateBtn" onclick="batchGenerate()">🚀 批量生成</button></div>
+<div class="batch-preview" id="batchPreview">将生成 120 张透明PNG</div>
+</div>
 <div class="control-section"><h3>图层列表 <span style="font-size:10px; color:#666; float:right;">👁显示 🔒锁定</span></h3><div class="object-list" id="objectList"></div></div>
 <div class="hint">💡 提示：拖拽/粘贴添加图片 · 双击重命名 · 支持撤销/重做</div>
 </div>
@@ -135,6 +160,7 @@ input[type="number"]:hover { border-color: #666; }
 <div style="width: 100%; display: flex; gap: 20px; flex-wrap: wrap;">
 <div style="flex:1; min-width: 300px;">
 <div class="control-section"><h3>选中元素属性</h3><div id="selectedInfoBottom" style="font-size: 11px; color: #999; padding: 5px 0;">未选中</div></div>
+<div id="lockedHintB" class="locked-hint" style="display:none;">🔒 该元素已锁定，无法移动</div>
 <div id="transformControlsBottom">
 <div class="control-row" id="textContentRowB" style="display:none; margin-bottom: 10px;"><input type="text" id="textContentInputB" style="width:100%; padding:5px; background:#222; border:1px solid #444; color:#fff;" oninput="updateTextContent()"></div>
 <div class="control-row"><label>X</label><input type="range" id="posXB" min="0" max="600" oninput="updateTransform('posXB')"><input type="number" id="posXBInput" oninput="inputSyncSlider('posXB')" onchange="updateTransformFromInput('posXB')" onfocus="this.select()"></div>
@@ -157,16 +183,13 @@ input[type="number"]:hover { border-color: #666; }
 </div>
 </div>
 <div class="toast" id="toast">提示</div>
+<div class="loading-overlay" id="loadingOverlay">
+<div class="loading-spinner"></div>
+<div class="loading-text">正在生成透明PNG...</div>
+<div class="loading-progress" id="loadingProgress">0 / 0</div>
+</div>
 <script>
-const textPresetConfig = {
-normal: { useGradient: true, gradientColor1: '#D4AF37', gradientColor2: '#F4E5BC' },
-gold_basic: { gradientStops: [{pos:0,color:'#5A3A00'},{pos:0.25,color:'#D4AF37'},{pos:0.45,color:'#FFF8DC'},{pos:0.55,color:'#FFF8DC'},{pos:0.75,color:'#D4AF37'},{pos:1,color:'#5A3A00'}], depthLayers: [{offsetX:1,offsetY:1,color:'#4A3520'},{offsetX:2,offsetY:2,color:'#3D2817'}], outerStroke: [{color:'#8B6914',width:6},{color:'#FFD700',width:3}], glow: {color:'rgba(255,215,0,0.6)',blur:20} },
-vip_gold: { gradientStops: [{pos:0,color:'#8B4513'},{pos:0.2,color:'#D4AF37'},{pos:0.4,color:'#FFD700'},{pos:0.48,color:'#FFE44D'},{pos:0.52,color:'#FFE44D'},{pos:0.6,color:'#FFD700'},{pos:0.8,color:'#D4AF37'},{pos:1,color:'#8B4513'}], depthLayers: [{offsetX:1,offsetY:1,color:'#6B3410'},{offsetX:2,offsetY:2,color:'#4A230C'},{offsetX:3,offsetY:3,color:'#2A1208'}], outerStroke: [{color:'#FF8C00',width:8},{color:'#FFD700',width:5}], glow: {color:'rgba(255,180,0,0.8)',blur:25} },
-red_fire: { gradientStops: [{pos:0,color:'#5A1A00'},{pos:0.25,color:'#D4380D'},{pos:0.45,color:'#FF6B35'},{pos:0.55,color:'#FFB366'},{pos:0.75,color:'#D4380D'},{pos:1,color:'#5A1A00'}], outerStroke: [{color:'#8B2500',width:6},{color:'#FF4500',width:3}], glow: {color:'rgba(255,80,0,0.6)',blur:20} },
-blue_neon: { gradientStops: [{pos:0,color:'#003344'},{pos:0.25,color:'#006699'},{pos:0.45,color:'#00D4FF'},{pos:0.55,color:'#66E0FF'},{pos:0.75,color:'#006699'},{pos:1,color:'#003344'}], outerStroke: [{color:'#005577',width:6},{color:'#00AACC',width:3}], glow: {color:'rgba(0,212,255,0.7)',blur:22} },
-purple_glow: { gradientStops: [{pos:0,color:'#33004D'},{pos:0.25,color:'#660099'},{pos:0.45,color:'#BF00FF'},{pos:0.55,color:'#E066FF'},{pos:0.75,color:'#660099'},{pos:1,color:'#33004D'}], outerStroke: [{color:'#4A0070',width:6},{color:'#8B00CC',width:3}], glow: {color:'rgba(191,0,255,0.7)',blur:22} },
-white_glass: { gradientStops: [{pos:0,color:'#757575'},{pos:0.25,color:'#BDBDBD'},{pos:0.45,color:'#F5F5F5'},{pos:0.55,color:'#FFFFFF'},{pos:0.75,color:'#BDBDBD'},{pos:1,color:'#757575'}], outerStroke: [{color:'#9E9E9E',width:5},{color:'#E0E0E0',width:2}], glow: {color:'rgba(255,255,255,0.4)',blur:15} }
-};
+const textPresetConfig = { normal: { useGradient: true, gradientColor1: '#D4AF37', gradientColor2: '#F4E5BC' }, gold_basic: { gradientStops: [{pos:0,color:'#5A3A00'},{pos:0.25,color:'#D4AF37'},{pos:0.45,color:'#FFF8DC'},{pos:0.55,color:'#FFF8DC'},{pos:0.75,color:'#D4AF37'},{pos:1,color:'#5A3A00'}], depthLayers: [{offsetX:1,offsetY:1,color:'#4A3520'},{offsetX:2,offsetY:2,color:'#3D2817'}], outerStroke: [{color:'#8B6914',width:6},{color:'#FFD700',width:3}], glow: {color:'rgba(255,215,0,0.6)',blur:20} }, vip_gold: { gradientStops: [{pos:0,color:'#8B4513'},{pos:0.2,color:'#D4AF37'},{pos:0.4,color:'#FFD700'},{pos:0.48,color:'#FFE44D'},{pos:0.52,color:'#FFE44D'},{pos:0.6,color:'#FFD700'},{pos:0.8,color:'#D4AF37'},{pos:1,color:'#8B4513'}], depthLayers: [{offsetX:1,offsetY:1,color:'#6B3410'},{offsetX:2,offsetY:2,color:'#4A230C'},{offsetX:3,offsetY:3,color:'#2A1208'}], outerStroke: [{color:'#FF8C00',width:8},{color:'#FFD700',width:5}], glow: {color:'rgba(255,180,0,0.8)',blur:25} }, red_fire: { gradientStops: [{pos:0,color:'#5A1A00'},{pos:0.25,color:'#D4380D'},{pos:0.45,color:'#FF6B35'},{pos:0.55,color:'#FFB366'},{pos:0.75,color:'#D4380D'},{pos:1,color:'#5A1A00'}], outerStroke: [{color:'#8B2500',width:6},{color:'#FF4500',width:3}], glow: {color:'rgba(255,80,0,0.6)',blur:20} }, blue_neon: { gradientStops: [{pos:0,color:'#003344'},{pos:0.25,color:'#006699'},{pos:0.45,color:'#00D4FF'},{pos:0.55,color:'#66E0FF'},{pos:0.75,color:'#006699'},{pos:1,color:'#003344'}], outerStroke: [{color:'#005577',width:6},{color:'#00AACC',width:3}], glow: {color:'rgba(0,212,255,0.7)',blur:22} }, purple_glow: { gradientStops: [{pos:0,color:'#33004D'},{pos:0.25,color:'#660099'},{pos:0.45,color:'#BF00FF'},{pos:0.55,color:'#E066FF'},{pos:0.75,color:'#660099'},{pos:1,color:'#33004D'}], outerStroke: [{color:'#4A0070',width:6},{color:'#8B00CC',width:3}], glow: {color:'rgba(191,0,255,0.7)',blur:22} }, white_glass: { gradientStops: [{pos:0,color:'#757575'},{pos:0.25,color:'#BDBDBD'},{pos:0.45,color:'#F5F5F5'},{pos:0.55,color:'#FFFFFF'},{pos:0.75,color:'#BDBDBD'},{pos:1,color:'#757575'}], outerStroke: [{color:'#9E9E9E',width:5},{color:'#E0E0E0',width:2}], glow: {color:'rgba(255,255,255,0.4)',blur:15} } };
 const canvas = document.getElementById('mainCanvas');
 const ctx = canvas.getContext('2d');
 const canvasConfig = { width: 600, height: 800 };
@@ -190,10 +213,24 @@ elements.push(
 render();
 updateObjectList();
 saveState();
+updateBatchPreview();
 document.addEventListener('paste', handlePaste);
 document.addEventListener('keydown', e => { if(e.key === 'Escape') hideUploadPanel(); if((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); if(e.shiftKey) redo(); else undo(); } });
 document.addEventListener('keydown', e => { if (e.key === 'Enter' && document.activeElement.tagName === 'INPUT' && document.activeElement.type === 'number') { document.activeElement.blur(); } });
+document.getElementById('batchStartDate').addEventListener('change', updateBatchPreview);
+document.getElementById('batchEndDate').addEventListener('change', updateBatchPreview);
+document.getElementById('batchCount').addEventListener('input', updateBatchPreview);
 requestAnimationFrame(renderLoop);
+}
+function updateBatchPreview() {
+const startDate = new Date(document.getElementById('batchStartDate').value);
+const endDate = new Date(document.getElementById('batchEndDate').value);
+const count = parseInt(document.getElementById('batchCount').value) || 1;
+if (startDate && endDate && !isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+const days = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+const total = days * count;
+document.getElementById('batchPreview').textContent = `将生成 ${total} 张透明PNG (${days}天 × ${count}张)`;
+}
 }
 function renderLoop() { if (isDirty) { render(); isDirty = false; } requestAnimationFrame(renderLoop); }
 function markDirty() { isDirty = true; }
@@ -211,18 +248,7 @@ ctx.rotate(el.rotation * Math.PI / 180);
 const w = el.width * (el.scale || 1);
 const h = el.height * (el.scale || 1);
 if (el.img) { ctx.drawImage(el.img, -w/2, -h/2, w, h); }
-else if (el.type === 'imageSlot') {
-ctx.fillStyle = '#ffffff';
-ctx.fillRect(-w/2, -h/2, w, h);
-ctx.strokeStyle = '#cccccc';
-ctx.setLineDash([6,4]);
-ctx.strokeRect(-w/2, -h/2, w, h);
-ctx.setLineDash([]);
-ctx.fillStyle = '#999';
-ctx.font = '12px Arial';
-ctx.textAlign = 'center';
-ctx.fillText('点击替换', 0, 0);
-}
+else if (el.type === 'imageSlot') { ctx.fillStyle = '#ffffff'; ctx.fillRect(-w/2, -h/2, w, h); ctx.strokeStyle = '#cccccc'; ctx.setLineDash([6,4]); ctx.strokeRect(-w/2, -h/2, w, h); ctx.setLineDash([]); ctx.fillStyle = '#999'; ctx.font = '12px Arial'; ctx.textAlign = 'center'; ctx.fillText('点击替换', 0, 0); }
 } else if (el.type === 'text') { renderText(ctx, el); }
 ctx.restore();
 if (idx === selectedIndex) drawSelectionBox(el);
@@ -302,21 +328,21 @@ const pos = getPointerPos(e);
 let found = false;
 for (let i = elements.length - 1; i >= 0; i--) {
 const el = elements[i];
-if (el.locked || el.visible === false) continue;
-let w, h;
-if (el.type === 'image' || el.type === 'imageSlot') { w = el.width * (el.scale || 1); h = el.height * (el.scale || 1); }
-else { w = getTextWidth(el); h = el.cache ? el.cache.textHeight : el.fontSize; }
-if (Math.abs(pos.x - el.x) < w/2 && Math.abs(pos.y - el.y) < h/2) {
-selectedIndex = i;
-if (el.type === 'imageSlot') { markDirty(); updateObjectList(); updateControls(); showUploadPanel(); return; }
-isDragging = true;
-dragStart = { x: pos.x - el.x, y: pos.y - el.y };
-found = true;
-markDirty();
-updateObjectList();
-updateControls();
-break;
+if (el.visible === false) continue;
+if (el.type === 'imageSlot') {
+let w = el.width * (el.scale || 1);
+let h = el.height * (el.scale || 1);
+if (Math.abs(pos.x - el.x) < w/2 && Math.abs(pos.y - el.y) < h/2) { selectedIndex = i; markDirty(); updateObjectList(); updateControls(); showUploadPanel(); return; }
 }
+}
+for (let i = elements.length - 1; i >= 0; i--) {
+const el = elements[i];
+if (el.locked || el.visible === false) continue;
+if (el.type === 'imageSlot') continue;
+let w, h;
+if (el.type === 'image') { w = el.width * (el.scale || 1); h = el.height * (el.scale || 1); }
+else { w = getTextWidth(el); h = el.cache ? el.cache.textHeight : el.fontSize; }
+if (Math.abs(pos.x - el.x) < w/2 && Math.abs(pos.y - el.y) < h/2) { selectedIndex = i; isDragging = true; dragStart = { x: pos.x - el.x, y: pos.y - el.y }; found = true; markDirty(); updateObjectList(); updateControls(); break; }
 }
 if (!found) { selectedIndex = -1; markDirty(); updateControls(); }
 }
@@ -327,12 +353,10 @@ const pos = getPointerPos(e);
 let el = elements[selectedIndex];
 let newX = pos.x - dragStart.x;
 let newY = pos.y - dragStart.y;
-let snappedX = false;
-let snappedY = false;
+let snappedX = false, snappedY = false;
 if (Math.abs(newX - CENTER_X) < SNAP_THRESHOLD) { newX = CENTER_X; snappedX = true; }
 if (Math.abs(newY - CENTER_Y) < SNAP_THRESHOLD) { newY = CENTER_Y; snappedY = true; }
-el.x = newX;
-el.y = newY;
+el.x = newX; el.y = newY;
 const container = document.getElementById('canvasContainer');
 const snapLineV = document.getElementById('snapLineV');
 const snapLineH = document.getElementById('snapLineH');
@@ -342,40 +366,30 @@ markDirty();
 updateControlsInputsOnly();
 }
 function handleEnd() {
-if(isDragging) {
-isDragging = false;
-const container = document.getElementById('canvasContainer');
-const snapLineV = document.getElementById('snapLineV');
-const snapLineH = document.getElementById('snapLineH');
-container.classList.remove('snap-active');
-snapLineV.style.display = 'none';
-snapLineH.style.display = 'none';
-saveState();
-}
+if(isDragging) { isDragging = false; const container = document.getElementById('canvasContainer'); const snapLineV = document.getElementById('snapLineV'); const snapLineH = document.getElementById('snapLineH'); container.classList.remove('snap-active'); snapLineV.style.display = 'none'; snapLineH.style.display = 'none'; saveState(); }
 }
 function updateTransform(source) {
 if (selectedIndex < 0) return;
 const el = elements[selectedIndex];
+if (el.locked || el.type === 'imageSlot') return;
 if (source === 'posX' || source === 'posXB' || !source) { const val = parseFloat(document.getElementById('posX').value) || 0; document.getElementById('posXInput').value = val; el.x = val; }
 if (source === 'posY' || source === 'posYB' || !source) { const val = parseFloat(document.getElementById('posY').value) || 0; document.getElementById('posYInput').value = val; el.y = val; }
 if (source === 'scale' || source === 'scaleB' || !source) { const val = parseFloat(document.getElementById('scale').value) || 100; document.getElementById('scaleInput').value = val; el.scale = val / 100; el.cache = null; }
 if (source === 'rotation' || !source) { const val = parseFloat(document.getElementById('rotation').value) || 0; document.getElementById('rotationInput').value = val; el.rotation = val; }
 if (source === 'opacity' || !source) { const val = parseFloat(document.getElementById('opacity').value) || 100; document.getElementById('opacityInput').value = val; el.opacity = val / 100; }
-syncTransformInputsUI();
-markDirty();
+syncTransformInputsUI(); markDirty();
 }
 function updateTransformFromInput(source) {
 if (selectedIndex < 0) return;
 const el = elements[selectedIndex];
+if (el.locked || el.type === 'imageSlot') return;
 let val;
 if (source === 'posX' || source === 'posXB' || !source) { val = parseFloat(document.getElementById('posXInput').value) || 0; val = Math.max(0, Math.min(600, val)); el.x = val; document.getElementById('posX').value = el.x; document.getElementById('posXInput').value = el.x; }
 if (source === 'posY' || source === 'posYB' || !source) { val = parseFloat(document.getElementById('posYInput').value) || 0; val = Math.max(0, Math.min(800, val)); el.y = val; document.getElementById('posY').value = el.y; document.getElementById('posYInput').value = el.y; }
 if (source === 'scale' || source === 'scaleB' || !source) { val = parseFloat(document.getElementById('scaleInput').value) || 100; val = Math.max(1, Math.min(1000, val)); el.scale = val / 100; document.getElementById('scale').value = val; document.getElementById('scaleInput').value = val; el.cache = null; }
 if (source === 'rotation' || !source) { val = parseFloat(document.getElementById('rotationInput').value) || 0; val = Math.max(0, Math.min(360, val)); el.rotation = val; document.getElementById('rotation').value = val; document.getElementById('rotationInput').value = val; }
 if (source === 'opacity' || !source) { val = parseFloat(document.getElementById('opacityInput').value) || 100; val = Math.max(0, Math.min(100, val)); el.opacity = val / 100; document.getElementById('opacity').value = val; document.getElementById('opacityInput').value = val; }
-syncTransformInputsUI();
-markDirty();
-saveState();
+syncTransformInputsUI(); markDirty(); saveState();
 }
 function updateText(source) {
 if (selectedIndex < 0) return;
@@ -399,8 +413,7 @@ el.cache = null;
 document.getElementById('fontSize').value = val;
 document.getElementById('fontSizeInput').value = val;
 document.getElementById('fontSizeB').value = val;
-markDirty();
-saveState();
+markDirty(); saveState();
 }
 function inputSyncSlider(source) {
 const inputId = source + 'Input';
@@ -438,11 +451,21 @@ const showTrans = idx >= 0;
 document.getElementById('transformControls').style.display = showTrans ? 'block' : 'none';
 document.getElementById('transformControlsBottom').style.display = showTrans ? 'block' : 'none';
 if (!el) return;
+const isLocked = el.locked;
+const isImageSlot = el.type === 'imageSlot';
+document.getElementById('lockedHint').style.display = (isLocked && !isImageSlot) ? 'block' : 'none';
+document.getElementById('lockedHintB').style.display = (isLocked && !isImageSlot) ? 'block' : 'none';
+document.querySelectorAll('#transformControls .control-row').forEach((row, i) => { if (i === 0) return; row.querySelectorAll('input').forEach(input => { input.disabled = isLocked || isImageSlot; }); });
+document.querySelectorAll('#transformControls button').forEach(btn => { btn.disabled = isLocked || isImageSlot; });
+document.querySelectorAll('#transformControlsBottom .control-row').forEach((row, i) => { if (i === 0) return; row.querySelectorAll('input').forEach(input => { input.disabled = isLocked || isImageSlot; }); });
+document.querySelectorAll('#transformControlsBottom button').forEach(btn => { btn.disabled = isLocked || isImageSlot; });
 const isText = el.type === 'text';
 document.getElementById('textContentRow').style.display = isText ? 'block' : 'none';
 document.getElementById('textContentRowB').style.display = isText ? 'block' : 'none';
 document.getElementById('textContentInput').value = el.text || '';
 document.getElementById('textContentInputB').value = el.text || '';
+document.getElementById('textContentInput').disabled = false;
+document.getElementById('textContentInputB').disabled = false;
 document.getElementById('posX').value = el.x; document.getElementById('posXInput').value = Math.round(el.x);
 document.getElementById('posY').value = el.y; document.getElementById('posYInput').value = Math.round(el.y);
 document.getElementById('scale').value = el.scale * 100; document.getElementById('scaleInput').value = Math.round(el.scale * 100);
@@ -458,11 +481,12 @@ document.getElementById('fontSize').value = el.fontSize;
 document.getElementById('fontSizeInput').value = el.fontSize;
 document.getElementById('fontSizeB').value = el.fontSize;
 document.getElementById('textColor').value = el.color;
+document.getElementById('fontSize').disabled = isLocked;
+document.getElementById('fontSizeInput').disabled = isLocked;
+document.getElementById('fontSizeB').disabled = isLocked;
+document.getElementById('textColor').disabled = isLocked;
 ['normal','gold_basic','vip_gold','red_fire','blue_neon','purple_glow','white_glass'].forEach(p => { document.getElementById('preset_'+p).classList.toggle('active', el.stylePreset === p); });
-} else {
-document.getElementById('textControls').style.display = 'none';
-document.getElementById('textControlsBottom').style.display = 'none';
-}
+} else { document.getElementById('textControls').style.display = 'none'; document.getElementById('textControlsBottom').style.display = 'none'; }
 }
 function updateTextContent() {
 if (selectedIndex < 0) return;
@@ -479,9 +503,6 @@ function setStylePreset(preset) {
 if (selectedIndex < 0 || elements[selectedIndex].type !== 'text') return;
 const el = elements[selectedIndex];
 el.stylePreset = preset;
-if (preset === 'vip_gold') el.fontSize = 80;
-else if (preset !== 'normal') el.fontSize = 72;
-else el.fontSize = 48;
 el.cache = null;
 markDirty();
 updateControls();
@@ -489,15 +510,7 @@ saveState();
 showToast('样式已切换');
 }
 function deleteSelected() {
-if (selectedIndex >= 0) {
-elements.splice(selectedIndex, 1);
-selectedIndex = -1;
-markDirty();
-updateObjectList();
-updateControls();
-saveState();
-showToast('已删除');
-}
+if (selectedIndex >= 0) { elements.splice(selectedIndex, 1); selectedIndex = -1; markDirty(); updateObjectList(); updateControls(); saveState(); showToast('已删除'); }
 }
 function moveLayer(d) {
 if (selectedIndex < 0) return;
@@ -525,13 +538,7 @@ item.className = classes.join(' ');
 const icon = el.type === 'text' ? '📝' : '🖼️';
 const eyeIcon = el.visible === false ? '👁️‍🗨️' : '👁️';
 const lockIcon = el.locked ? '🔒' : '🔓';
-item.innerHTML = `
-<div class="object-info">
-<button class="eye-btn ${el.visible === false ? 'hidden-eye' : ''}" onclick="toggleVisibility(${i}, event)" title="${el.visible === false ? '显示' : '隐藏'}">${eyeIcon}</button>
-<button class="lock-btn ${el.locked?'locked':''}" onclick="toggleLock(${i}, event)" title="${el.locked ? '已锁定' : '未锁定'}">${lockIcon}</button>
-<span class="layer-name"><span class="type-icon">${icon}</span> ${el.name || el.text}</span>
-</div>
-<button class="delete-btn" onclick="deleteElement(${i}, event)" title="删除">×</button>`;
+item.innerHTML = `<div class="object-info"><button class="eye-btn ${el.visible === false ? 'hidden-eye' : ''}" onclick="toggleVisibility(${i}, event)" title="${el.visible === false ? '显示' : '隐藏'}">${eyeIcon}</button><button class="lock-btn ${el.locked?'locked':''}" onclick="toggleLock(${i}, event)" title="${el.locked ? '已锁定' : '未锁定'}">${lockIcon}</button><span class="layer-name"><span class="type-icon">${icon}</span> ${el.name || el.text}</span></div><button class="delete-btn" onclick="deleteElement(${i}, event)" title="删除">×</button>`;
 item.onclick = e => { if(e.target.tagName!=='BUTTON'){ selectedIndex=i; markDirty(); updateObjectList(); updateControls(); } };
 return item;
 };
@@ -539,157 +546,45 @@ list1.innerHTML = '';
 list2.innerHTML = '';
 for (let i = elements.length-1; i>=0; i--) { list1.appendChild(createItem(elements[i], i)); list2.appendChild(createItem(elements[i], i)); }
 }
-function toggleVisibility(i, e) {
-e.stopPropagation();
-elements[i].visible = !elements[i].visible;
-markDirty();
-updateObjectList();
-if (selectedIndex === i) updateControls();
-}
-function toggleLock(i, e) {
-e.stopPropagation();
-elements[i].locked=!elements[i].locked;
-markDirty();
-updateObjectList();
-updateControls();
-showToast(elements[i].locked?'已锁定':'已解锁');
-}
-function deleteElement(i, e) {
-e.stopPropagation();
-elements.splice(i,1);
-if(selectedIndex===i) selectedIndex=-1;
-else if(selectedIndex>i) selectedIndex--;
-markDirty();
-updateObjectList();
-updateControls();
-saveState();
-}
-function editLayerName(i, e) {
-e.stopPropagation();
-const el = elements[i];
-const span = e.target;
-const input = document.createElement('input');
-input.value = el.name || el.text;
-input.style.cssText = 'width:100%; background:#111; border:1px solid #gold; color:#fff;';
-input.onblur = () => { el.name = input.value; updateObjectList(); updateControls(); markDirty(); };
-input.onkeydown = e => { if(e.key==='Enter') input.blur(); };
-span.replaceWith(input);
-input.focus();
-}
-function toggleLayout() {
-const ws = document.getElementById('workspace');
-if (layoutMode === 'side') { layoutMode = 'bottom'; ws.classList.add('layout-bottom'); }
-else { layoutMode = 'side'; ws.classList.remove('layout-bottom'); }
-showToast(layoutMode === 'bottom' ? '已切换到底部模式' : '已切换到侧边模式');
-}
+function toggleVisibility(i, e) { e.stopPropagation(); elements[i].visible = !elements[i].visible; markDirty(); updateObjectList(); if (selectedIndex === i) updateControls(); }
+function toggleLock(i, e) { e.stopPropagation(); elements[i].locked=!elements[i].locked; markDirty(); updateObjectList(); updateControls(); showToast(elements[i].locked?'已锁定':'已解锁'); }
+function deleteElement(i, e) { e.stopPropagation(); elements.splice(i,1); if(selectedIndex===i) selectedIndex=-1; else if(selectedIndex>i) selectedIndex--; markDirty(); updateObjectList(); updateControls(); saveState(); }
+function toggleLayout() { const ws = document.getElementById('workspace'); if (layoutMode === 'side') { layoutMode = 'bottom'; ws.classList.add('layout-bottom'); } else { layoutMode = 'side'; ws.classList.remove('layout-bottom'); } showToast(layoutMode === 'bottom' ? '已切换到底部模式' : '已切换到侧边模式'); }
 function serializeElements() { return JSON.stringify(elements.map(e => { const o = {...e}; if(o.img) { o.imgData = imageToDataURL(o.img); delete o.img; } return o; })); }
-async function deserializeElements(json) {
-const arr = JSON.parse(json);
-for(let el of arr) { if(el.imgData) { el.img = await dataURLToImage(el.imgData); } if(el.type === 'text') el.cache = null; }
-return arr;
-}
-function saveState() {
-const state = serializeElements();
-if (historyIndex < history.length - 1) { history = history.slice(0, historyIndex + 1); }
-history.push(state);
-if (history.length > MAX_HISTORY) history.shift();
-historyIndex = history.length - 1;
-updateUndoRedoButtons();
-}
+async function deserializeElements(json) { const arr = JSON.parse(json); for(let el of arr) { if(el.imgData) { el.img = await dataURLToImage(el.imgData); } if(el.type === 'text') el.cache = null; } return arr; }
+function saveState() { const state = serializeElements(); if (historyIndex < history.length - 1) { history = history.slice(0, historyIndex + 1); } history.push(state); if (history.length > MAX_HISTORY) history.shift(); historyIndex = history.length - 1; updateUndoRedoButtons(); }
 async function undo() { if (historyIndex > 0) { historyIndex--; await restoreState(history[historyIndex]); } }
 async function redo() { if (historyIndex < history.length - 1) { historyIndex++; await restoreState(history[historyIndex]); } }
-async function restoreState(json) {
-const newEls = await deserializeElements(json);
-elements = newEls;
-selectedIndex = -1;
-markDirty();
-updateObjectList();
-updateControls();
-updateUndoRedoButtons();
-}
+async function restoreState(json) { const newEls = await deserializeElements(json); elements = newEls; selectedIndex = -1; markDirty(); updateObjectList(); updateControls(); updateUndoRedoButtons(); }
 function updateUndoRedoButtons() { document.getElementById('undoBtn').disabled = historyIndex <= 0; document.getElementById('redoBtn').disabled = historyIndex >= history.length - 1; }
 function addAdSlots() {
 elements.unshift({ type: 'imageSlot', name: '游戏商', width: 235, height: 169, x: canvasConfig.width - 235/2 - 15, y: 15 + 169/2, img: null, imgData: null, scale: 1, rotation: 0, opacity: 1, locked: false, visible: true });
 elements.unshift({ type: 'imageSlot', name: '游戏', width: 235, height: 235, x: canvasConfig.width - 235/2 - 15, y: 15 + 169 + 15 + 235/2, img: null, imgData: null, scale: 1, rotation: 0, opacity: 1, locked: false, visible: true });
-selectedIndex = -1;
-markDirty();
-updateObjectList();
-updateControls();
-saveState();
-showToast('已添加广告位');
+selectedIndex = -1; markDirty(); updateObjectList(); updateControls(); saveState(); showToast('已添加广告位');
 }
 function addTitle(text) {
 const defaultText = text || '标题文字';
 const el = { type: 'text', text: defaultText, fontSize: 48, color: '#D4AF37', align: 'center', x: canvasConfig.width/2, y: 200, rotation: 0, opacity: 1, isTitle: true, stylePreset: 'normal', name: '标题', useGradient: true, gradientColor1: '#D4AF37', gradientColor2: '#F4E5BC', locked: false, visible: true, cache: null };
-elements.unshift(el);
-selectedIndex = 0;
-markDirty();
-updateObjectList();
-updateControls();
-saveState();
-showToast('标题添加成功');
+elements.unshift(el); selectedIndex = 0; markDirty(); updateObjectList(); updateControls(); saveState(); showToast('标题添加成功');
 }
 function handleImgUpload(e) { if (e.target.files[0]) { handleImageFile(e.target.files[0]); hideUploadPanel(); } }
-// ======== 修改：图片上传自动贴合边框缩放 ========
 function handleImageFile(file) {
 const r = new FileReader();
 r.onload = ev => {
 const i = new Image();
 i.onload = () => {
-if (selectedIndex >= 0 && elements[selectedIndex].type === 'imageSlot') {
-elements[selectedIndex].img = i;
-elements[selectedIndex].imgData = imageToDataURL(i);
-markDirty();
-updateControls();
-saveState();
-showToast('图片替换成功');
-return;
-}
-// 计算贴合边框的缩放比例（保持宽高比，最大化填充画布）
-const scale = Math.max(
-    canvasConfig.width / i.width,
-    canvasConfig.height / i.height
-);
+if (selectedIndex >= 0 && elements[selectedIndex].type === 'imageSlot') { elements[selectedIndex].img = i; elements[selectedIndex].imgData = imageToDataURL(i); markDirty(); updateControls(); saveState(); showToast('图片替换成功'); return; }
+const scale = Math.max(canvasConfig.width / i.width, canvasConfig.height / i.height);
 const scaledWidth = i.width * scale;
 const scaledHeight = i.height * scale;
-const el = {
-type: 'image',
-img: i,
-imgData: imageToDataURL(i),
-x: canvasConfig.width / 2,  // 居中
-y: canvasConfig.height / 2, // 居中
-width: scaledWidth,         // 贴合边框的宽度
-height: scaledHeight,       // 贴合边框的高度
-scale: 1,                   // 基础缩放为1
-rotation: 0,
-opacity: 1,
-name: file.name.replace(/\.[^/.]+$/, '').substring(0,15)||'图片',
-locked: false,
-visible: true
-};
-elements.unshift(el);
-selectedIndex = 0;
-markDirty();
-updateObjectList();
-updateControls();
-saveState();
-showToast('图片添加成功（已贴合边框）');
-};
-i.src = ev.target.result;
-};
-r.readAsDataURL(file);
+const el = { type: 'image', img: i, imgData: imageToDataURL(i), x: canvasConfig.width / 2, y: canvasConfig.height / 2, width: scaledWidth, height: scaledHeight, scale: 1, rotation: 0, opacity: 1, name: file.name.replace(/\.[^/.]+$/, '').substring(0,15)||'图片', locked: false, visible: true };
+elements.unshift(el); selectedIndex = 0; markDirty(); updateObjectList(); updateControls(); saveState(); showToast('图片添加成功（已贴合边框）');
+}; i.src = ev.target.result;
+}; r.readAsDataURL(file);
 }
-function handlePaste(e) {
-const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-for (let item of items) { if (item.type.indexOf('image') !== -1) { handleImageFile(item.getAsFile()); break; } }
-}
+function handlePaste(e) { const items = (e.clipboardData || e.originalEvent.clipboardData).items; for (let item of items) { if (item.type.indexOf('image') !== -1) { handleImageFile(item.getAsFile()); break; } } }
 function exportProject() {
-const d = { version: '1.0', elements: elements.map(e => {
-const b = { type: e.type, x:e.x, y:e.y, scale:e.scale, rotation:e.rotation, opacity:e.opacity, name:e.name, locked:e.locked, visible:e.visible };
-if (e.type === 'image' || e.type === 'imageSlot') { b.imgData = e.imgData; b.width=e.width; b.height=e.height; }
-else if (e.type === 'text') { b.text=e.text; b.fontSize=e.fontSize; b.color=e.color; b.align=e.align; b.stylePreset=e.stylePreset; b.gradientColor1=e.gradientColor1; b.gradientColor2=e.gradientColor2; }
-return b;
-})};
+const d = { version: '1.0', elements: elements.map(e => { const b = { type: e.type, x:e.x, y:e.y, scale:e.scale, rotation:e.rotation, opacity:e.opacity, name:e.name, locked:e.locked, visible:e.visible }; if (e.type === 'image' || e.type === 'imageSlot') { b.imgData = e.imgData; b.width=e.width; b.height=e.height; } else if (e.type === 'text') { b.text=e.text; b.fontSize=e.fontSize; b.color=e.color; b.align=e.align; b.stylePreset=e.stylePreset; b.gradientColor1=e.gradientColor1; b.gradientColor2=e.gradientColor2; } return b; })};
 const b = new Blob([JSON.stringify(d)], {type:'application/json'});
 const a = document.createElement('a');
 a.download='poster-project.json';
@@ -701,53 +596,118 @@ async function importProject(evt) {
 const f = evt.target.files[0];
 if (!f) return;
 const r = new FileReader();
-r.onload = async e => {
-try {
-const data = JSON.parse(e.target.result);
-elements = [];
-for (const ed of data.elements) {
-if (ed.type === 'image' || ed.type === 'imageSlot') { const img = ed.imgData ? await dataURLToImage(ed.imgData) : null; elements.push({ ...ed, img }); }
-else { elements.push({ ...ed, cache: null }); }
-}
-selectedIndex = -1;
-markDirty();
-updateObjectList();
-updateControls();
-saveState();
-showToast('项目导入成功');
-} catch(err) { console.error(err); showToast('导入失败'); }
-};
+r.onload = async e => { try { const data = JSON.parse(e.target.result); elements = []; for (const ed of data.elements) { if (ed.type === 'image' || ed.type === 'imageSlot') { const img = ed.imgData ? await dataURLToImage(ed.imgData) : null; elements.push({ ...ed, img }); } else { elements.push({ ...ed, cache: null }); } } selectedIndex = -1; markDirty(); updateObjectList(); updateControls(); saveState(); showToast('项目导入成功'); } catch(err) { console.error(err); showToast('导入失败'); } };
 r.readAsText(f);
 }
-function exportCanvas(transparent) {
+function exportCanvasToBase64(transparent) {
 const ec = document.createElement('canvas');
 const scale = 2;
-ec.width = 600 * scale;
-ec.height = 800 * scale;
+ec.width = 600 * scale; ec.height = 800 * scale;
 const ectx = ec.getContext('2d');
 ectx.scale(scale, scale);
-if (!transparent) { ectx.fillStyle='#1a1a1a'; ectx.fillRect(0,0,600,800); }
+if (!transparent) { ectx.fillStyle = '#1a1a1a'; ectx.fillRect(0,0,600,800); }
 elements.forEach(el => {
 if(el.visible === false) return;
-ectx.save();
-ectx.globalAlpha = el.opacity;
+ectx.save(); ectx.globalAlpha = el.opacity;
 if (el.type === 'text') renderText(ectx, el);
-else if (el.img) { ectx.translate(el.x, el.y); ectx.rotate(el.rotation*Math.PI/180); const w = el.width*(el.scale||1), h = el.height*(el.scale||1); ectx.drawImage(el.img, -w/2, -h/2, w, h); }
+else if (el.img) { ectx.translate(el.x, el.y); ectx.rotate(el.rotation*Math.PI/180); const w = el.width*(el.scale||1); const h = el.height*(el.scale||1); ectx.drawImage(el.img, -w/2, -h/2, w, h); }
 ectx.restore();
 });
-const a = document.createElement('a');
-a.download = transparent?'poster-t.png':'poster.png';
-a.href=ec.toDataURL('image/png');
-a.click();
-showToast('已导出PNG');
+return ec.toDataURL('image/png');
 }
+function exportCanvas(transparent) { const dataURL = exportCanvasToBase64(transparent); const a = document.createElement('a'); a.download = transparent ? 'poster-t.png' : 'poster.png'; a.href = dataURL; a.click(); showToast('已导出PNG'); }
 function showUploadPanel() { document.getElementById('uploadPanel').classList.add('show'); }
 function hideUploadPanel() { document.getElementById('uploadPanel').classList.remove('show'); }
-function showToast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2000); }
+function showToast(msg, type = '') { const t = document.getElementById('toast'); t.textContent = msg; t.className = 'toast show ' + type; setTimeout(() => t.classList.remove('show'), 2000); }
 const dz = document.querySelector('.upload-panel-inner');
 dz.addEventListener('dragover', e => { e.preventDefault(); dz.style.borderColor = '#D4AF37'; });
 dz.addEventListener('dragleave', () => dz.style.borderColor='#444');
 dz.addEventListener('drop', e => { e.preventDefault(); dz.style.borderColor='#444'; if(e.dataTransfer.files[0]) { handleImageFile(e.dataTransfer.files[0]); hideUploadPanel(); } });
+// ========== 【修复】批量生成功能 - 确保每张图片文字不同 ==========
+async function batchGenerate() {
+const startDate = document.getElementById('batchStartDate').value;
+const endDate = document.getElementById('batchEndDate').value;
+const perDay = parseInt(document.getElementById('batchCount').value);
+if (!startDate || !endDate || !perDay) { showToast('请输入完整参数', 'error'); return; }
+const startDateObj = new Date(startDate);
+const endDateObj = new Date(endDate);
+if (startDateObj > endDateObj) { showToast('开始日期不能晚于结束日期', 'error'); return; }
+const days = Math.ceil((endDateObj - startDateObj) / (1000 * 60 * 60 * 24)) + 1;
+const totalImages = days * perDay;
+if (totalImages > 1000) { if (!confirm(`将生成 ${totalImages} 张图片，可能需要较长时间。是否继续？`)) { return; } }
+// 验证必要的图层
+const dateEl = elements.find(el => el.name === '日期');
+const amountEl = elements.find(el => el.name === '金额');
+const titleEl = elements.find(el => el.name === '标题');
+if (!dateEl || !amountEl || !titleEl) { showToast('模板中缺少必要的图层（日期、金额、标题）', 'error'); return; }
+// ⭐ 关键1：保存原始模板
+const original = JSON.stringify(elements);
+// 显示loading
+document.getElementById('loadingOverlay').classList.add('show');
+const btn = document.getElementById('batchGenerateBtn');
+btn.disabled = true;
+const zip = new JSZip();
+let current = 0;
+const progressEl = document.getElementById('loadingProgress');
+progressEl.textContent = `0 / ${totalImages}`;
+try {
+for (let d = 0; d < days; d++) {
+const currentDate = new Date(startDateObj);
+currentDate.setDate(startDateObj.getDate() + d);
+const dateStr = currentDate.toISOString().split('T')[0];
+for (let i = 0; i < perDay; i++) {
+current++;
+// ⭐ 关键2：每次循环恢复原始模板（否则所有图片一样）
+elements = JSON.parse(original);
+// ===== 生成随机时间 =====
+const hour = String(Math.floor(Math.random() * 12) + 1).padStart(2, '0');
+const minute = String(Math.floor(Math.random() * 60)).padStart(2, '0');
+const ampm = Math.random() > 0.5 ? 'AM' : 'PM';
+const fullTime = `${dateStr} ${hour}:${minute} ${ampm}`;
+// ===== 生成随机金额 =====
+let amount;
+if (Math.random() < 0.9) { amount = Math.floor(Math.random() * ((12000 - 4000) / 100)) * 100 + 4000; }
+else { amount = Math.floor(Math.random() * (12000 - 4000)) + 4000; }
+const amountFormatted = amount.toLocaleString();
+// ⭐ 关键3：替换文本 + 清除cache（不清除cache文字不会更新）
+elements.forEach(el => {
+if (el.name === '日期') { el.text = fullTime; el.cache = null; }
+if (el.name === '金额') { el.text = `MYR ${amountFormatted}.00`; el.cache = null; }
+if (el.name === '标题') { el.text = `RM ${amountFormatted}`; el.cache = null; }
+});
+// ⭐ 关键4：强制刷新渲染 + 等待渲染完成
+markDirty();
+await new Promise(r => setTimeout(r, 50));
+// 导出透明PNG
+const base64 = exportCanvasToBase64(true);
+const blob = await (await fetch(base64)).blob();
+const fileName = `${dateStr}_${hour}-${minute}-${ampm}.png`;
+zip.file(fileName, blob);
+// 更新进度
+progressEl.textContent = `${current} / ${totalImages}`;
+if (current % 10 === 0) await new Promise(r => setTimeout(r, 1));
+}
+}
+progressEl.textContent = '正在打包...';
+const zipBlob = await zip.generateAsync({ type: 'blob' });
+const a = document.createElement('a');
+a.download = 'batch_images.zip';
+a.href = URL.createObjectURL(zipBlob);
+a.click();
+// ⭐ 关键5：结束后恢复画布
+elements = JSON.parse(original);
+markDirty();
+updateObjectList();
+updateControls();
+showToast(`已生成并下载 ${totalImages} 张透明PNG`, 'success');
+} catch (err) {
+console.error(err);
+showToast('生成失败: ' + err.message, 'error');
+} finally {
+document.getElementById('loadingOverlay').classList.remove('show');
+btn.disabled = false;
+}
+}
 init();
 </script>
 </body>
