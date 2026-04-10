@@ -46,6 +46,9 @@ input:disabled{opacity:0.5;cursor:not-allowed;}
 .control-section{margin-bottom:15px;padding-bottom:12px;border-bottom:1px solid #333;}
 .control-section:last-child{border-bottom:none;}
 .control-section h3{font-size:12px;color:var(--gold);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;}
+.control-section h3.collapsible{display:flex;justify-content:space-between;cursor:pointer;user-select:none;}
+.control-section h3.collapsible:hover{color:var(--gold-light);}
+.control-section h3.collapsible .toggle-icon{font-size:10px;transition:transform 0.2s;}
 .control-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
 .control-row label{font-size:11px;color:#999;min-width:40px;}
 .control-row .unit{font-size:10px;color:#666;margin-left:2px;}
@@ -115,10 +118,11 @@ input:disabled{opacity:0.5;cursor:not-allowed;}
 <div class="control-row"><label>Y</label><input type="range" id="posY" min="0" max="800" value="400" oninput="updateTransform('posY')"><input type="number" id="posYInput" value="400" oninput="inputSyncSlider('posY')" onchange="updateTransformFromInput('posY')"></div>
 <div class="control-row"><label>缩放</label><input type="range" id="scale" min="1" max="1000" value="100" oninput="updateTransform('scale')"><input type="number" id="scaleInput" value="100" min="1" max="1000" oninput="inputSyncSlider('scale')" onchange="updateTransformFromInput('scale')"><span class="unit">%</span></div>
 <div class="control-row"><label>旋转</label><input type="range" id="rotation" min="0" max="360" value="0" oninput="updateTransform('rotation')"><input type="number" id="rotationInput" value="0" min="0" max="360" oninput="inputSyncSlider('rotation')" onchange="updateTransformFromInput('rotation')"><span class="unit">°</span></div>
-<div style="display:flex;gap:5px;margin-top:8px;"><button class="btn btn-sm" onclick="moveLayer(-1)" style="flex:1">⬆ 上</button><button class="btn btn-sm" onclick="moveLayer(1)" style="flex:1">⬇ 下</button><button class="btn btn-sm" onclick="deleteSelected()" style="flex:1;color:#ff6b6b;">🗑️ 删</button></div>
+<div style="display:flex;gap:5px;margin-top:8px;"><button class="btn btn-sm" onclick="deleteSelected()" style="flex:1;color:#ff6b6b;">🗑️ 删除</button></div>
 </div>
 <div class="control-section" id="textControls" style="display:none;">
-<h3>文字样式</h3>
+<h3 class="collapsible" onclick="toggleTextPanel()">文字样式 <span class="toggle-icon" id="textPanelToggle">▼</span></h3>
+<div id="textPanelContent">
 <div class="style-preset-row">
 <button class="btn btn-sm" id="preset_normal" onclick="setStylePreset('normal')">普通</button>
 <button class="btn btn-sm btn-gold" id="preset_gold_basic" onclick="setStylePreset('gold_basic')">金</button>
@@ -161,13 +165,6 @@ input:disabled{opacity:0.5;cursor:not-allowed;}
 <div class="control-row" style="gap:5px;"><label style="min-width:20px;">2</label><input type="color" id="strokeColor2" value="#000000" onchange="updateEffectColor('strokeColor2')" style="width:25px;"><input type="number" id="strokeWidth2" value="0" min="0" max="20" style="width:45px" oninput="updateEffect('strokeWidth2')"></div>
 </div>
 </div>
-<div class="batch-panel">
-<h4>📦 批量生成</h4>
-<div class="batch-row"><label>开始</label><input type="date" id="batchStartDate" value="2026-01-01"></div>
-<div class="batch-row"><label>结束</label><input type="date" id="batchEndDate" value="2026-01-30"></div>
-<div class="batch-row"><label>每日</label><input type="number" id="batchCount" value="4" min="1" max="100"></div>
-<div class="batch-row"><button class="btn btn-batch" id="batchGenerateBtn" onclick="batchGenerate()">🚀 批量生成</button></div>
-<div class="batch-preview" id="batchPreview">将生成 120 张</div>
 </div>
 <div class="control-section">
 <h3>图层列表</h3>
@@ -175,7 +172,19 @@ input:disabled{opacity:0.5;cursor:not-allowed;}
 <button class="btn btn-sm" style="flex:1" onclick="copyLayer()">📋 复制</button>
 <button class="btn btn-sm" style="flex:1" onclick="pasteLayer()">📄 粘贴</button>
 </div>
+<div style="display:flex; gap:6px; margin-bottom:8px;">
+<button class="btn btn-sm" style="flex:1" onclick="moveLayer(-1)">⬆ 上移</button>
+<button class="btn btn-sm" style="flex:1" onclick="moveLayer(1)">⬇ 下移</button>
+</div>
 <div class="object-list" id="objectList"></div>
+</div>
+<div class="batch-panel">
+<h4>📦 批量生成</h4>
+<div class="batch-row"><label>开始</label><input type="date" id="batchStartDate" value="2026-01-01"></div>
+<div class="batch-row"><label>结束</label><input type="date" id="batchEndDate" value="2026-01-30"></div>
+<div class="batch-row"><label>每日</label><input type="number" id="batchCount" value="4" min="1" max="100"></div>
+<div class="batch-row"><button class="btn btn-batch" id="batchGenerateBtn" onclick="batchGenerate()">🚀 批量生成</button></div>
+<div class="batch-preview" id="batchPreview">将生成 120 张</div>
 </div>
 </div>
 </div>
@@ -190,7 +199,16 @@ input:disabled{opacity:0.5;cursor:not-allowed;}
 <div class="toast" id="toast">提示</div>
 <div class="loading-overlay" id="loadingOverlay"><div class="loading-spinner"></div><div class="loading-text">处理中...</div><div class="loading-progress" id="loadingProgress"></div></div>
 <script>
-const textPresetConfig={ normal:{useGradient:true,gradientColor1:'#D4AF37',gradientColor2:'#F4E5BC',gradientSize:100,gradientX:0,gradientY:0}, gold_basic:{gradientStops:[{pos:0,color:'#5A3A00'},{pos:0.25,color:'#D4AF37'},{pos:0.5,color:'#FFF8DC'},{pos:0.75,color:'#D4AF37'},{pos:1,color:'#5A3A00'}],gradientSize:100,gradientX:0,gradientY:0,outerStroke:[{color:'#8B6914',width:6},{color:'#FFD700',width:3}],glow:{color:'rgba(255,215,0,0.6)',blur:20},shadow:{offsetX:2,offsetY:2,size:5,spread:8}}, vip_gold:{gradientStops:[{pos:0,color:'#8B4513'},{pos:0.2,color:'#D4AF37'},{pos:0.4,color:'#FFD700'},{pos:0.5,color:'#FFE44D'},{pos:0.6,color:'#FFD700'},{pos:0.8,color:'#D4AF37'},{pos:1,color:'#8B4513'}],gradientSize:100,gradientX:0,gradientY:0,outerStroke:[{color:'#FF8C00',width:8},{color:'#FFD700',width:4}],glow:{color:'rgba(255,180,0,0.8)',blur:25},shadow:{offsetX:3,offsetY:3,size:8,spread:12}}, red_fire:{gradientStops:[{pos:0,color:'#5A1A00'},{pos:0.3,color:'#D4380D'},{pos:0.5,color:'#FF6B35'},{pos:0.7,color:'#D4380D'},{pos:1,color:'#5A1A00'}],gradientSize:100,gradientX:0,gradientY:0,outerStroke:[{color:'#8B2500',width:6},{color:'#FF4500',width:3}],glow:{color:'rgba(255,80,0,0.6)',blur:20},shadow:{offsetX:2,offsetY:2,size:4,spread:6}}, blue_neon:{gradientStops:[{pos:0,color:'#003344'},{pos:0.3,color:'#006699'},{pos:0.5,color:'#00D4FF'},{pos:0.7,color:'#006699'},{pos:1,color:'#003344'}],gradientSize:120,gradientX:0,gradientY:0,outerStroke:[{color:'#005577',width:6},{color:'#00AACC',width:3}],glow:{color:'rgba(0,212,255,0.7)',blur:22},shadow:{offsetX:0,offsetY:0,size:10,spread:15}}, purple_glow:{gradientStops:[{pos:0,color:'#33004D'},{pos:0.3,color:'#660099'},{pos:0.5,color:'#BF00FF'},{pos:0.7,color:'#660099'},{pos:1,color:'#33004D'}],gradientSize:150,gradientX:0,gradientY:-20,outerStroke:[{color:'#4A0070',width:6},{color:'#8B00CC',width:3}],glow:{color:'rgba(191,0,255,0.7)',blur:22},shadow:{offsetX:0,offsetY:0,size:12,spread:20}}, white_glass:{gradientStops:[{pos:0,color:'#757575'},{pos:0.3,color:'#BDBDBD'},{pos:0.5,color:'#F5F5F5'},{pos:0.7,color:'#BDBDBD'},{pos:1,color:'#757575'}],gradientSize:80,gradientX:0,gradientY:0,outerStroke:[{color:'#9E9E9E',width:5},{color:'#E0E0E0',width:2}],glow:{color:'rgba(255,255,255,0.4)',blur:15},shadow:{offsetX:1,offsetY:1,size:3,spread:4}}, huazi:{gradientStops:[{pos:0,color:'#8B2500'},{pos:0.3,color:'#FF4500'},{pos:0.5,color:'#FFD700'},{pos:0.7,color:'#FF4500'},{pos:1,color:'#8B2500'}],gradientSize:120,gradientX:0,gradientY:-10,outerStroke:[{color:'#5A1A00',width:8},{color:'#FFD700',width:4}],glow:{color:'rgba(255,180,0,0.7)',blur:25},shadow:{offsetX:3,offsetY:3,size:15,spread:15}} };
+const textPresetConfig={
+normal:{useGradient:true,gradientColor1:'#D4AF37',gradientColor2:'#F4E5BC',gradientSize:100,gradientX:0,gradientY:0},
+gold_basic:{gradientStops:[{pos:0,color:'#5A3A00'},{pos:0.25,color:'#D4AF37'},{pos:0.5,color:'#FFF8DC'},{pos:0.75,color:'#D4AF37'},{pos:1,color:'#5A3A00'}],gradientSize:100,gradientX:0,gradientY:0,outerStroke:[{color:'#8B6914',width:6},{color:'#FFD700',width:3}],glow:{color:'rgba(255,215,0,0.6)',blur:20},shadow:{offsetX:2,offsetY:2,size:5,spread:8}},
+vip_gold:{gradientStops:[{pos:0,color:'#8B4513'},{pos:0.2,color:'#D4AF37'},{pos:0.4,color:'#FFD700'},{pos:0.5,color:'#FFE44D'},{pos:0.6,color:'#FFD700'},{pos:0.8,color:'#D4AF37'},{pos:1,color:'#8B4513'}],gradientSize:100,gradientX:0,gradientY:0,outerStroke:[{color:'#FF8C00',width:8},{color:'#FFD700',width:4}],glow:{color:'rgba(255,180,0,0.8)',blur:25},shadow:{offsetX:3,offsetY:3,size:8,spread:12}},
+red_fire:{gradientStops:[{pos:0,color:'#5A1A00'},{pos:0.3,color:'#D4380D'},{pos:0.5,color:'#FF6B35'},{pos:0.7,color:'#D4380D'},{pos:1,color:'#5A1A00'}],gradientSize:100,gradientX:0,gradientY:0,outerStroke:[{color:'#8B2500',width:6},{color:'#FF4500',width:3}],glow:{color:'rgba(255,80,0,0.6)',blur:20},shadow:{offsetX:2,offsetY:2,size:4,spread:6}},
+blue_neon:{gradientStops:[{pos:0,color:'#003344'},{pos:0.3,color:'#006699'},{pos:0.5,color:'#00D4FF'},{pos:0.7,color:'#006699'},{pos:1,color:'#003344'}],gradientSize:120,gradientX:0,gradientY:0,outerStroke:[{color:'#005577',width:6},{color:'#00AACC',width:3}],glow:{color:'rgba(0,212,255,0.7)',blur:22},shadow:{offsetX:0,offsetY:0,size:10,spread:15}},
+purple_glow:{gradientStops:[{pos:0,color:'#33004D'},{pos:0.3,color:'#660099'},{pos:0.5,color:'#BF00FF'},{pos:0.7,color:'#660099'},{pos:1,color:'#33004D'}],gradientSize:150,gradientX:0,gradientY:-20,outerStroke:[{color:'#4A0070',width:6},{color:'#8B00CC',width:3}],glow:{color:'rgba(191,0,255,0.7)',blur:22},shadow:{offsetX:0,offsetY:0,size:12,spread:20}},
+white_glass:{gradientStops:[{pos:0,color:'#757575'},{pos:0.3,color:'#BDBDBD'},{pos:0.5,color:'#F5F5F5'},{pos:0.7,color:'#BDBDBD'},{pos:1,color:'#757575'}],gradientSize:80,gradientX:0,gradientY:0,outerStroke:[{color:'#9E9E9E',width:5},{color:'#E0E0E0',width:2}],glow:{color:'rgba(255,255,255,0.4)',blur:15},shadow:{offsetX:1,offsetY:1,size:3,spread:4}},
+huazi:{gradientStops:[{pos:0,color:'#8B2500'},{pos:0.3,color:'#FF4500'},{pos:0.5,color:'#FFD700'},{pos:0.7,color:'#FF4500'},{pos:1,color:'#8B2500'}],gradientSize:120,gradientX:0,gradientY:-10,outerStroke:[{color:'#5A1A00',width:8},{color:'#FFD700',width:4}],glow:{color:'rgba(255,180,0,0.7)',blur:25},shadow:{offsetX:3,offsetY:3,size:15,spread:15}}
+};
 const canvas=document.getElementById('mainCanvas');
 const ctx=canvas.getContext('2d');
 const canvasConfig={width:600,height:800};
@@ -224,34 +242,17 @@ document.getElementById('batchEndDate').addEventListener('change',updateBatchPre
 document.getElementById('batchCount').addEventListener('input',updateBatchPreview);
 requestAnimationFrame(renderLoop);
 }
-
-// ⭐ 修复1：完整深拷贝，保留所有字段
 function copyLayer(){
 if(selectedIndex < 0) return;
-// ⭐ 完整深拷贝（包含所有字段，无遗漏）
 const data = JSON.stringify(elements[selectedIndex]);
 localStorage.setItem('layerClipboard', data);
 showToast('已复制完整图层');
 }
-
-// ⭐ 修复2：粘贴时完整还原全部数据，不偏移不修改
 function pasteLayer(){
 const data = localStorage.getItem('layerClipboard');
-if(!data) {
-showToast('剪贴板为空，请先复制图层', 'error');
-return;
-}
-// ⭐ 完整还原所有数据
+if(!data) { showToast('剪贴板为空，请先复制图层', 'error'); return; }
 const newLayer = JSON.parse(data);
-// ❌ 不偏移位置（保持原位置）
-// newLayer.x += 20;
-// newLayer.y += 20;
-// ❌ 不强制解锁（保持原锁定状态）
-// newLayer.locked = false;
-// ⭐ 只清缓存（避免文字不刷新）
-if(newLayer.type === 'text'){
-newLayer.cache = null;
-}
+if(newLayer.type === 'text'){ newLayer.cache = null; }
 elements.unshift(newLayer);
 selectedIndex = 0;
 markDirty();
@@ -260,8 +261,6 @@ updateControls();
 saveState();
 showToast('已粘贴完整图层');
 }
-
-// 修复双击改名
 function editLayerName(e, index){
 e.stopPropagation();
 const span = e.target;
@@ -275,51 +274,41 @@ span.replaceWith(input);
 input.focus();
 input.select();
 input.onblur = save;
-input.onkeydown = (ev)=>{
-if(ev.key === 'Enter') save();
-if(ev.key === 'Escape') updateObjectList();
-};
+input.onkeydown = (ev)=>{ if(ev.key === 'Enter') save(); if(ev.key === 'Escape') updateObjectList(); };
 function save(){
 const val = input.value.trim();
-if(val){
-el.name = val;
-}
+if(val){ el.name = val; }
 updateObjectList();
 saveState();
 }
 }
-
-// 同步 number 值到 slider
 function syncNumber(id){
 const val = document.getElementById(id).value;
 document.getElementById(id+'Input').value = val;
 }
-
-// 从 number 输入更新效果（支持更多参数）
 function updateEffectFromInput(type){
 if(selectedIndex < 0) return;
 const el = elements[selectedIndex];
 if(el.type!=='text') return;
 let val = parseFloat(document.getElementById(type+'Input').value)||0;
-const limits = {
-gradientAngle:[0,360],
-gradientSize:[0,500],
-gradientX:[-200,200],
-gradientY:[-200,200],
-glowBlur:[0,100],
-shadowOffsetX:[-50,50],
-shadowOffsetY:[-50,50],
-shadowSize:[0,50],
-shadowSpread:[0,50]
-};
-if(limits[type]){
-val = Math.max(limits[type][0], Math.min(limits[type][1], val));
-}
+const limits = { gradientAngle:[0,360], gradientSize:[0,500], gradientX:[-200,200], gradientY:[-200,200], glowBlur:[0,100], shadowOffsetX:[-50,50], shadowOffsetY:[-50,50], shadowSize:[0,50], shadowSpread:[0,50] };
+if(limits[type]){ val = Math.max(limits[type][0], Math.min(limits[type][1], val)); }
 el[type] = val;
 document.getElementById(type).value = val;
 if(el.type==='text') el.cache = null;
 markDirty();
 saveState();
+}
+function toggleTextPanel(){
+const content = document.getElementById('textPanelContent');
+const icon = document.getElementById('textPanelToggle');
+if(content.style.display === 'none'){
+content.style.display = 'block';
+icon.innerText = '▼';
+}else{
+content.style.display = 'none';
+icon.innerText = '▲';
+}
 }
 function updateBatchPreview(){
 const startDate=new Date(document.getElementById('batchStartDate').value);
@@ -574,8 +563,9 @@ document.getElementById('strokeColor1').value=el.strokeColor1||'#000000';
 document.getElementById('strokeWidth1').value=el.strokeWidth1||0;
 document.getElementById('strokeColor2').value=el.strokeColor2||'#000000';
 document.getElementById('strokeWidth2').value=el.strokeWidth2||0;
-['gradientColor1','gradientColor2','gradientColor3','gradientAngle','gradientSize','gradientX','gradientY','shadowOffsetX','shadowOffsetY','shadowSize','shadowSpread','shadowColor','glowBlur','glowColor','strokeColor1','strokeWidth1','strokeColor2','strokeWidth2'].forEach(id=>{document.getElementById(id).disabled=isLocked;});
-['shadowOffsetXInput','shadowOffsetYInput','shadowSizeInput','shadowSpreadInput','gradientAngleInput','gradientSizeInput','gradientXInput','gradientYInput','glowBlurInput'].forEach(id=>{document.getElementById(id).disabled=isLocked;});
+// 锁定时仍然允许修改文字样式（渐变、发光、阴影、描边）
+['gradientColor1','gradientColor2','gradientColor3','gradientAngle','gradientSize','gradientX','gradientY','shadowOffsetX','shadowOffsetY','shadowSize','shadowSpread','shadowColor','glowBlur','glowColor','strokeColor1','strokeWidth1','strokeColor2','strokeWidth2'].forEach(id=>{ document.getElementById(id).disabled=false; });
+['shadowOffsetXInput','shadowOffsetYInput','shadowSizeInput','shadowSpreadInput','gradientAngleInput','gradientSizeInput','gradientXInput','gradientYInput','glowBlurInput'].forEach(id=>{ document.getElementById(id).disabled=false; });
 ['normal','gold_basic','vip_gold','red_fire','blue_neon','purple_glow','white_glass','huazi'].forEach(p=>{const btn=document.getElementById('preset_'+p);if(btn)btn.classList.toggle('active',el.stylePreset===p);});
 }else{document.getElementById('textControls').style.display='none';}
 document.getElementById('posX').value=el.x;document.getElementById('posXInput').value=Math.round(el.x);
