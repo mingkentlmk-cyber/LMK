@@ -27,6 +27,7 @@ body{font-family:'Noto Sans SC',sans-serif;background:linear-gradient(145deg,var
 .btn-neon-blue{background:linear-gradient(180deg,#00D4FF,#0099CC);border:1px solid #00D4FF;color:#001a22;}
 .btn-glass{background:linear-gradient(180deg,#F5F5F5,#E0E0E0);border:1px solid #F5F5F5;color:#1a1a1a;}
 .btn-batch{background:linear-gradient(180deg,#6366f1,#4f46e5);border:1px solid #818cf8;color:#fff;}
+.btn-paste{background:linear-gradient(180deg,#4CAF50,#2E7D32);border:1px solid #4CAF50;color:#fff;}
 input[type="file"]{display:none;}
 input[type="color"]{width:30px;height:28px;border:1px solid #555;border-radius:4px;background:#2a2a2a;cursor:pointer;padding:0;}
 input[type="range"]{width:80px;accent-color:var(--gold);cursor:pointer;}
@@ -80,6 +81,8 @@ input:disabled{opacity:0.5;cursor:not-allowed;}
 .upload-panel-inner h3{color:var(--gold);margin-bottom:15px;}
 .upload-panel-buttons{display:flex;flex-direction:column;align-items:center;gap:12px;margin-top:10px;}
 .upload-panel-buttons .btn{min-width:150px;justify-content:center;}
+.upload-panel-buttons .btn-row{display:flex;gap:10px;width:100%;}
+.upload-panel-buttons .btn-row .btn{flex:1;}
 .locked-hint{background:#3a3520;border:1px solid #D4AF37;border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:#D4AF37;text-align:center;}
 .batch-panel{background:linear-gradient(135deg,#1e1b4b 0%,#312e81 100%);border:1px solid #4f46e5;border-radius:8px;padding:12px;margin-bottom:10px;}
 .batch-panel h4{color:#818cf8;font-size:11px;margin-bottom:10px;text-transform:uppercase;}
@@ -191,7 +194,13 @@ input:disabled{opacity:0.5;cursor:not-allowed;}
 <div class="upload-panel-inner" id="uploadDropZone">
 <h3>添加图片</h3>
 <p style="color:#888;font-size:12px;margin-bottom:15px;">拖拽图片 / 点击选择 / Ctrl+V 粘贴</p>
-<div class="upload-panel-buttons"><button class="btn primary" onclick="document.getElementById('imgUpload').click()">📁 选择</button><button class="btn" onclick="hideUploadPanel()">✖</button></div>
+<div class="upload-panel-buttons">
+<div class="btn-row">
+<button class="btn btn-paste" onclick="pasteFromClipboard()">📋 粘贴</button>
+<button class="btn primary" onclick="document.getElementById('imgUpload').click()">📁 选择</button>
+</div>
+<button class="btn" onclick="hideUploadPanel()" style="margin-top:10px;width:100%;">✖ 取消</button>
+</div>
 <input type="file" id="imgUpload" accept="image/*" onchange="handleImgUpload(event)" style="display:none;">
 </div>
 </div>
@@ -218,6 +227,7 @@ let dragStart={x:0,y:0};
 ['dragenter','dragover','dragleave','drop'].forEach(eventName=>{
 document.addEventListener(eventName, e=>{e.preventDefault();e.stopPropagation();});
 });
+
 function init(){
 // ==================== 修改后的样式 👇 ====================
 const defaultTemplate=[
@@ -252,6 +262,50 @@ hideUploadPanel();
 }
 });
 }
+
+// ⭐ 新增：粘贴按钮功能
+async function pasteFromClipboard(){
+try{
+// 尝试使用 Clipboard API
+const clipboardItems = await navigator.clipboard.read();
+for (const item of clipboardItems) {
+for (const type of item.types) {
+if (type.startsWith('image/')) {
+const blob = await item.getType(type);
+handleImageBlob(blob);
+hideUploadPanel();
+return;
+}
+}
+}
+// 如果没有图片类型，尝试从剪贴板读取
+const clipboardData = await navigator.clipboard.readText();
+showToast('剪贴板中没有图片', 'error');
+} catch (err) {
+// 兼容旧版浏览器：使用 paste 事件
+document.addEventListener('paste', function pasteHandler(e){
+document.removeEventListener('paste', pasteHandler);
+const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+for (let item of items) {
+if (item.type.indexOf('image') !== -1) {
+handleImageFile(item.getAsFile());
+hideUploadPanel();
+return;
+}
+}
+showToast('剪贴板中没有图片', 'error');
+}, {once: true});
+
+// 触发粘贴
+document.execCommand('paste');
+}
+}
+
+function handleImageBlob(blob) {
+const file = new File([blob], 'clipboard-image.png', { type: blob.type });
+handleImageFile(file);
+}
+
 function copyLayer(){if(selectedIndex<0)return;const data=JSON.stringify(elements[selectedIndex]);localStorage.setItem('layerClipboard',data);showToast('已复制完整图层');}
 function pasteLayer(){const data=localStorage.getItem('layerClipboard');if(!data){showToast('剪贴板为空，请先复制图层','error');return;}const newLayer=JSON.parse(data);if(!newLayer.type){showToast('数据异常','error');return;}if(newLayer.type==='text'){newLayer.cache=null;}elements.unshift(newLayer);selectedIndex=0;markDirty();updateObjectList();updateControls();saveState();showToast('已粘贴完整图层');}
 function editLayerName(e,index){e.stopPropagation();const span=e.target;const el=elements[index];if(span.tagName==='INPUT')return;const input=document.createElement('input');input.type='text';input.value=el.name||el.text;input.className='layer-nameInput';span.replaceWith(input);input.focus();input.select();input.onblur=save;input.onkeydown=(ev)=>{if(ev.key==='Enter')save();if(ev.key==='Escape')updateObjectList();};function save(){const val=input.value.trim();if(val){el.name=val;}updateObjectList();saveState();}}
