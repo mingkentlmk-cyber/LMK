@@ -60,6 +60,7 @@ input:disabled{opacity:0.5;cursor:not-allowed;}
 .object-item.selected{border-color:var(--gold);background:#2a2a20;}
 .object-item.locked-item{border-color:#D4AF37;}
 .object-item.hidden-item{opacity:0.4;}
+.object-item.preset-item{border-color:#4CAF50;background:#1a2a1a;}
 .object-info{display:flex;align-items:center;gap:6px;flex:1;min-width:0;}
 .eye-btn,.lock-btn{background:#333;border:none;color:#888;cursor:pointer;font-size:11px;padding:3px 6px;border-radius:4px;flex-shrink:0;}
 .eye-btn:hover,.lock-btn:hover{background:#444;color:#fff;}
@@ -71,6 +72,11 @@ input:disabled{opacity:0.5;cursor:not-allowed;}
 .delete-btn:hover{background:#442222;color:#ff6b6b;}
 .style-preset-row{display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap;}
 .style-preset-row .btn{flex:1;min-width:40px;font-size:9px;padding:4px 2px;}
+.align-row{display:flex;gap:4px;margin-bottom:8px;}
+.align-row .btn{flex:1;min-width:50px;font-size:10px;padding:5px 2px;}
+.preset-header{display:flex;align-items:center;gap:6px;padding:8px 10px;background:linear-gradient(135deg,#1a3a1a 0%,#0d1f0d 100%);border:1px solid #4CAF50;border-radius:6px;margin-bottom:8px;}
+.preset-header-icon{font-size:14px;}
+.preset-header-text{font-size:11px;color:#4CAF50;font-weight:500;}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--gold);color:var(--darker);padding:10px 20px;border-radius:8px;font-weight:500;opacity:0;transition:all 0.3s;z-index:1000;pointer-events:none;}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
 .toast.error{background:#ef4444;color:#fff;}
@@ -122,11 +128,12 @@ input:disabled{opacity:0.5;cursor:not-allowed;}
 </div>
 <div class="toolbar-row">
 <div class="toolbar-group"><span class="toolbar-label">历史</span>
-<button class="btn" id="undoBtn" onclick="undo()" title="撤销">↩️ 撤销</button>
-<button class="btn" id="redoBtn" onclick="redo()" title="重做">↪️ 重做</button>
+<button class="btn" id="undoBtn" onclick="undo()" title="Undo">↩️ Undo</button>
+<button class="btn" id="redoBtn" onclick="redo()" title="Redo">↪️ Redo</button>
 </div>
 <div class="toolbar-group"><span class="toolbar-label">视图</span>
-<button class="btn" onclick="toggleLayout()">🔄 切换排版</button>
+<button class="btn" onclick="toggleLayout()">🔄 排版</button>
+<button class="btn" id="templateSwitchBtn" onclick="switchTemplate()">📋 模板</button>
 </div>
 </div>
 </div>
@@ -151,7 +158,13 @@ input:disabled{opacity:0.5;cursor:not-allowed;}
 <div class="control-section" id="textControls" style="display:none;">
 <h3 class="collapsible" onclick="toggleTextPanel()">文字样式 <span class="toggle-icon" id="textPanelToggle">▼</span></h3>
 <div id="textPanelContent">
-<div class="style-preset-row">
+<div style="font-size:10px;color:#aaa;margin-bottom:4px;margin-top:8px;">对齐方式</div>
+<div class="align-row">
+<button class="btn btn-sm" id="align_left" onclick="setTextAlign('left')">⬅️ 靠左</button>
+<button class="btn btn-sm" id="align_center" onclick="setTextAlign('center')">⬆️ 置中</button>
+<button class="btn btn-sm" id="align_right" onclick="setTextAlign('right')">➡️ 靠右</button>
+</div>
+<div class="style-preset-row" style="margin-top:8px;">
 <button class="btn btn-sm btn-gold" id="preset_gold_basic" onclick="setStylePreset('gold_basic')">金</button>
 <button class="btn btn-sm btn-vip" id="preset_vip_gold" onclick="setStylePreset('vip_gold')">VIP</button>
 <button class="btn btn-sm btn-fire" id="preset_red_fire" onclick="setStylePreset('red_fire')">火</button>
@@ -194,18 +207,21 @@ input:disabled{opacity:0.5;cursor:not-allowed;}
 </div>
 <div class="control-section">
 <h3>图层列表</h3>
-<div style="display:flex; gap:6px; margin-bottom:8px;">
+<div class="preset-header"><span class="preset-header-icon">⭐</span><span class="preset-header-text">预设图层（最前）</span></div>
+<div id="presetLayerList"></div>
+<div style="display:flex; gap:6px; margin-bottom:8px; margin-top:12px;">
 <button class="btn btn-sm" style="flex:1" onclick="copyLayer()">📋 复制</button>
 <button class="btn btn-sm" style="flex:1" onclick="pasteLayer()">📄 粘贴</button>
 </div>
 <div style="display:flex; gap:6px; margin-bottom:8px;">
-<button class="btn btn-sm" style="flex:1" onclick="moveLayer(-1)">⬆ 上移</button>
-<button class="btn btn-sm" style="flex:1" onclick="moveLayer(1)">⬇ 下移</button>
+<button class="btn btn-sm" style="flex:1" onclick="moveLayer(1)">⬆️ 上移</button>
+<button class="btn btn-sm" style="flex:1" onclick="moveLayer(-1)">⬇️ 下移</button>
 </div>
 <div style="display:flex; gap:6px; margin-bottom:8px;">
 <button class="btn btn-sm" style="flex:1" onclick="copyStyle()">🎨 复制样式</button>
 <button class="btn btn-sm" style="flex:1" onclick="pasteStyle()">🧩 粘贴样式</button>
 </div>
+<h3 style="margin-top:15px;">模板图层</h3>
 <div class="object-list" id="objectList"></div>
 </div>
 <div class="batch-panel">
@@ -233,6 +249,34 @@ input:disabled{opacity:0.5;cursor:not-allowed;}
 <div class="toast" id="toast">提示</div>
 <div class="loading-overlay" id="loadingOverlay"><div class="loading-spinner"></div><div class="loading-text">处理中...</div><div class="loading-progress" id="loadingProgress"></div></div>
 <script>
+// 获取当前系统日期时间 - 12小时制
+function getCurrentDateTime12(){
+const now=new Date();
+const year=now.getFullYear();
+const month=String(now.getMonth()+1).padStart(2,'0');
+const day=String(now.getDate()).padStart(2,'0');
+const hours=now.getHours();
+const minutes=String(now.getMinutes()).padStart(2,'0');
+const h12=hours%12||12;
+const ampm=hours<12?'AM':'PM';
+return`${year}-${month}-${day} ${String(h12).padStart(2,'0')}:${minutes} ${ampm}`;
+}
+// 获取当前系统日期 - DD/MM/YYYY格式
+function getCurrentDateDMY(){
+const now=new Date();
+const day=String(now.getDate()).padStart(2,'0');
+const month=String(now.getMonth()+1).padStart(2,'0');
+const year=now.getFullYear();
+return`${day}/${month}/${year}`;
+}
+// 获取当前系统时间 - 24小时制 HH:MM:SS
+function getCurrentTime24(){
+const now=new Date();
+const hours=String(now.getHours()).padStart(2,'0');
+const minutes=String(now.getMinutes()).padStart(2,'0');
+const seconds=String(now.getSeconds()).padStart(2,'0');
+return`${hours}:${minutes}:${seconds}`;
+}
 const textPresetConfig={normal:{useGradient:false,gradientColor1:'#D4AF37',gradientColor2:'#D4AF37',gradientSize:100,gradientX:0,gradientY:0},gold_basic:{gradientStops:[{pos:0,color:'#5A3A00'},{pos:0.25,color:'#D4AF37'},{pos:0.5,color:'#FFF8DC'},{pos:0.75,color:'#D4AF37'},{pos:1,color:'#5A3A00'}],gradientSize:100,gradientX:0,gradientY:0,outerStroke:[{color:'#8B6914',width:6},{color:'#FFD700',width:3}],glow:{color:'rgba(255,215,0,0.6)',blur:20},shadow:{offsetX:2,offsetY:2,size:5,spread:8}},vip_gold:{gradientStops:[{pos:0,color:'#8B4513'},{pos:0.2,color:'#D4AF37'},{pos:0.4,color:'#FFD700'},{pos:0.5,color:'#FFE44D'},{pos:0.6,color:'#FFD700'},{pos:0.8,color:'#D4AF37'},{pos:1,color:'#8B4513'}],gradientSize:100,gradientX:0,gradientY:0,outerStroke:[{color:'#FF8C00',width:8},{color:'#FFD700',width:4}],glow:{color:'rgba(255,180,0,0.8)',blur:25},shadow:{offsetX:3,offsetY:3,size:8,spread:12}},red_fire:{gradientStops:[{pos:0,color:'#5A1A00'},{pos:0.3,color:'#D4380D'},{pos:0.5,color:'#FF6B35'},{pos:0.7,color:'#D4380D'},{pos:1,color:'#5A1A00'}],gradientSize:100,gradientX:0,gradientY:0,outerStroke:[{color:'#8B2500',width:6},{color:'#FF4500',width:3}],glow:{color:'rgba(255,80,0,0.6)',blur:20},shadow:{offsetX:2,offsetY:2,size:4,spread:6}},blue_neon:{gradientStops:[{pos:0,color:'#003344'},{pos:0.3,color:'#006699'},{pos:0.5,color:'#00D4FF'},{pos:0.7,color:'#006699'},{pos:1,color:'#003344'}],gradientSize:120,gradientX:0,gradientY:0,outerStroke:[{color:'#005577',width:6},{color:'#00AACC',width:3}],glow:{color:'rgba(0,212,255,0.7)',blur:22},shadow:{offsetX:0,offsetY:0,size:10,spread:15}},purple_glow:{gradientStops:[{pos:0,color:'#33004D'},{pos:0.3,color:'#660099'},{pos:0.5,color:'#BF00FF'},{pos:0.7,color:'#660099'},{pos:1,color:'#33004D'}],gradientSize:150,gradientX:0,gradientY:-20,outerStroke:[{color:'#4A0070',width:6},{color:'#8B00CC',width:3}],glow:{color:'rgba(191,0,255,0.7)',blur:22},shadow:{offsetX:0,offsetY:0,size:12,spread:20}},white_glass:{gradientStops:[{pos:0,color:'#757575'},{pos:0.3,color:'#BDBDBD'},{pos:0.5,color:'#F5F5F5'},{pos:0.7,color:'#BDBDBD'},{pos:1,color:'#757575'}],gradientSize:80,gradientX:0,gradientY:0,outerStroke:[{color:'#9E9E9E',width:5},{color:'#E0E0E0',width:2}],glow:{color:'rgba(255,255,255,0.4)',blur:15},shadow:{offsetX:1,offsetY:1,size:3,spread:4}},huazi:{gradientStops:[{pos:0,color:'#8B2500'},{pos:0.3,color:'#FF4500'},{pos:0.5,color:'#FFD700'},{pos:0.7,color:'#FF4500'},{pos:1,color:'#8B2500'}],gradientSize:120,gradientX:0,gradientY:-10,outerStroke:[{color:'#5A1A00',width:8},{color:'#FFD700',width:4}],glow:{color:'rgba(255,180,0,0.7)',blur:25},shadow:{offsetX:3,offsetY:3,size:15,spread:15}}};
 const canvas=document.getElementById('mainCanvas');
 const ctx=canvas.getContext('2d');
@@ -240,348 +284,124 @@ const canvasConfig={width:600,height:800};
 const SNAP_THRESHOLD=20;
 const CENTER_X=canvasConfig.width/2;
 const CENTER_Y=canvasConfig.height/2;
-let elements=[];
+let presetElements=[];
+let templateElements=[];
 let selectedIndex=-1;
+let selectedType='';
 let isDragging=false;
 let isDirty=false;
 let layoutMode='side';
 let history=[];
 let historyIndex=-1;
-const MAX_HISTORY=30;
+const MAX_HISTORY=50;
 let dragStart={x:0,y:0};
+let currentTemplateMode='default';
+let saveHistoryTimeout=null;
+// 默认模板配置 - 使用当前系统时间
+const defaultPresetConfig={date:{type:'text',name:'日期',text:getCurrentDateTime12(),x:144,y:649,scale:0.96,rotation:0,opacity:1,fontSize:24,align:'center',color:'#D4AF37',stylePreset:'normal',gradientColor1:'#4b3514',gradientColor2:'#927034',locked:true,visible:true,cache:null},amount:{type:'text',name:'金额',text:'MYR 10,000.00',x:572,y:651,scale:0.92,rotation:0,opacity:1,fontSize:27,align:'right',color:'#D4AF37',stylePreset:'normal',gradientColor1:'#453112',gradientColor2:'#977234',locked:true,visible:true,cache:null},title:{type:'text',name:'标题',text:'RM 10,000',x:583,y:535,scale:1.01,rotation:0,opacity:1,fontSize:60,align:'right',color:'#D4AF37',stylePreset:'gold_basic',gradientColor1:'#5A3A00',gradientColor2:'#FFF8DC',gradientColor3:null,gradientAngle:83,gradientSize:10,gradientX:-200,gradientY:3,shadowOffsetX:0,shadowOffsetY:0,shadowSize:15,shadowSpread:22,glowBlur:16,glowColor:'rgba(255,215,0,0.6)',strokeColor1:'#f2df78',strokeWidth1:3,strokeColor2:'#3c3116',strokeWidth2:8,locked:true,visible:true,cache:null}};
+// 自定义模板配置 - 使用当前系统时间（24小时制）
+const customPresetConfig={title:{type:'text',name:'标题',text:'RM 10,000',x:582.99,y:550.65,scale:1.35,rotation:0,opacity:1,fontSize:48,align:'right',color:'#D4AF37',stylePreset:'gold_basic',gradientColor1:'#5A3A00',gradientColor2:'#FFF8DC',gradientColor3:null,gradientAngle:0,gradientSize:100,gradientX:0,gradientY:0,shadowOffsetX:2,shadowOffsetY:2,shadowSize:5,shadowSpread:8,shadowColor:'#000000',glowBlur:20,glowColor:'rgba(255,215,0,0.6)',strokeColor1:'#FFD700',strokeWidth1:3,strokeColor2:'#8B6914',strokeWidth2:6,locked:true,visible:true,cache:null},date:{type:'text',name:'日期',text:getCurrentDateDMY(),x:77.6,y:635.06,scale:0.46,rotation:0,opacity:1,fontSize:48,align:'center',color:'#D4AF37',stylePreset:'normal',gradientColor1:'#ffffff',gradientColor2:'#ffffff',gradientColor3:'#ffffff',gradientAngle:0,gradientSize:100,gradientX:0,gradientY:0,shadowOffsetX:0,shadowOffsetY:0,shadowSize:0,shadowSpread:0,shadowColor:'#000000',glowBlur:0,glowColor:'#FFD700',strokeColor1:'#000000',strokeWidth1:0,strokeColor2:'#000000',strokeWidth2:0,locked:true,visible:true,cache:null},time:{type:'text',name:'时间',text:getCurrentTime24(),x:75.97,y:657.79,scale:0.4,rotation:0,opacity:1,fontSize:48,align:'center',color:'#D4AF37',stylePreset:'normal',gradientColor1:'#ffffff',gradientColor2:'#ffffff',gradientColor3:'#ffffff',gradientAngle:0,gradientSize:100,gradientX:0,gradientY:0,shadowOffsetX:0,shadowOffsetY:0,shadowSize:0,shadowSpread:0,shadowColor:'#000000',glowBlur:0,glowColor:'#FFD700',strokeColor1:'#000000',strokeWidth1:0,strokeColor2:'#000000',strokeWidth2:0,locked:true,visible:true,cache:null},amount:{type:'text',name:'金额',text:'10000.00',x:394.16,y:644.81,scale:0.46,rotation:0,opacity:1,fontSize:48,align:'center',color:'#D4AF37',stylePreset:'normal',gradientColor1:'#ffffff',gradientColor2:'#ffffff',gradientColor3:'#ffffff',gradientAngle:0,gradientSize:100,gradientX:0,gradientY:0,shadowOffsetX:0,shadowOffsetY:0,shadowSize:0,shadowSpread:0,shadowColor:'#000000',glowBlur:0,glowColor:'#FFD700',strokeColor1:'#000000',strokeWidth1:0,strokeColor2:'#000000',strokeWidth2:0,locked:true,visible:true,cache:null}};
+function to12HourFormat(hours,minutes){const h=hours%12;const h12=h===0?12:h;const ampm=hours<12?'AM':'PM';return`${String(h12).padStart(2,'0')}:${String(minutes).padStart(2,'0')} ${ampm}`;}
 function getRandomAmount(){let base=Math.floor(Math.random()*(12000-4000)+4000);if(Math.random()<0.9){base=Math.floor(base/100)*100;}return base;}
 function formatAmount(num){return num.toLocaleString('en-US',{minimumFractionDigits:2});}
 function formatTitle(num){return num.toLocaleString('en-US',{maximumFractionDigits:0});}
-function getRandomTime(){let h=Math.floor(Math.random()*12)+1;let m=Math.floor(Math.random()*60);let ampm=Math.random()<0.5?'AM':'PM';return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')} ${ampm}`;}
+function getRandomTime(){let h=Math.floor(Math.random()*12)+1;let m=Math.floor(Math.random()*60);let ampm=Math.random()<0.5?'AM':'PM';return`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')} ${ampm}`;}
+function getRandomTime24(){let h=Math.floor(Math.random()*24);let m=Math.floor(Math.random()*60);let s=Math.floor(Math.random()*60);return`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;}
+function formatDateDMY(date){const d=date.getDate();const m=date.getMonth()+1;const y=date.getFullYear();return`${String(d).padStart(2,'0')}/${String(m).padStart(2,'0')}/${y}`;}
+// 防抖保存历史记录
+function debouncedSaveState(){
+if(saveHistoryTimeout)clearTimeout(saveHistoryTimeout);
+saveHistoryTimeout=setTimeout(()=>{
+saveState();
+},300);
+}
+function createPresetElements(){
+if(currentTemplateMode==='custom'){return JSON.parse(JSON.stringify([customPresetConfig.title,customPresetConfig.date,customPresetConfig.time,customPresetConfig.amount]));}
+return JSON.parse(JSON.stringify([defaultPresetConfig.date,defaultPresetConfig.amount,defaultPresetConfig.title]));
+}
+function switchTemplate(){
+if(currentTemplateMode==='default'){currentTemplateMode='custom';document.getElementById('templateSwitchBtn').classList.add('active');showToast('已切换到自定义模板');}else{currentTemplateMode='default';document.getElementById('templateSwitchBtn').classList.remove('active');showToast('已切换到默认模板');}
+presetElements=createPresetElements();selectedIndex=-1;selectedType='';markDirty();updateObjectList();updateControls();saveState();
+}
 function init(){
-const defaultTemplate=[
-{type:'text',name:'日期',text:'2026-04-30 04:20 PM',x:144,y:649,scale:0.96,rotation:0,opacity:1,fontSize:24,align:'center',color:'#D4AF37',stylePreset:'normal',gradientColor1:'#4b3514',gradientColor2:'#927034',locked:true,visible:true,cache:null},
-{type:'text',name:'金额',text:'MYR 10,000.00',x:572,y:651,scale:0.92,rotation:0,opacity:1,fontSize:27,align:'right',color:'#D4AF37',stylePreset:'normal',gradientColor1:'#453112',gradientColor2:'#977234',locked:true,visible:true,cache:null},
-{type:'text',name:'标题',text:'RM 10,000',x:583,y:535,scale:1.01,rotation:0,opacity:1,fontSize:60,align:'right',color:'#D4AF37',stylePreset:'gold_basic',gradientColor1:'#5A3A00',gradientColor2:'#FFF8DC',gradientColor3:null,gradientAngle:83,gradientSize:10,gradientX:-200,gradientY:3,shadowOffsetX:0,shadowOffsetY:0,shadowSize:15,shadowSpread:22,glowBlur:16,glowColor:'rgba(255,215,0,0.6)',strokeColor1:'#f2df78',strokeWidth1:3,strokeColor2:'#3c3116',strokeWidth2:8,locked:true,visible:true,cache:null}
-];
-elements=JSON.parse(JSON.stringify(defaultTemplate));
-render();updateObjectList();saveState();updateBatchPreview();
+presetElements=createPresetElements();templateElements=[];render();updateObjectList();saveState();updateBatchPreview();
 document.addEventListener('paste',handlePaste);
 document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();if(e.shiftKey)redo();else undo();}});
-document.getElementById('batchStartDate').addEventListener('change',updateBatchPreview);
-document.getElementById('batchEndDate').addEventListener('change',updateBatchPreview);
-document.getElementById('batchCount').addEventListener('input',updateBatchPreview);
+document.getElementById('batchStartDate').addEventListener('change',updateBatchPreview);document.getElementById('batchEndDate').addEventListener('change',updateBatchPreview);document.getElementById('batchCount').addEventListener('input',updateBatchPreview);
 requestAnimationFrame(renderLoop);
-const panel=document.getElementById('uploadPanel');
-const inner=document.getElementById('uploadDropZone');
+const panel=document.getElementById('uploadPanel');const inner=document.getElementById('uploadDropZone');
 panel.addEventListener('dragover',e=>{e.preventDefault();inner.classList.add('drag-over');});
 panel.addEventListener('dragleave',e=>{const rect=panel.getBoundingClientRect();const x=e.clientX,y=e.clientY;if(x<=rect.left||x>=rect.right||y<=rect.top||y>=rect.bottom){inner.classList.remove('drag-over');}});
-panel.addEventListener('drop',e=>{e.preventDefault();e.stopPropagation();inner.classList.remove('drag-over');const dt=e.dataTransfer;if(dt.files&&dt.files.length){handleImageFile(dt.files[0]);hideUploadPanel();return;}if(dt.items){for(let item of dt.items){if(item.kind==='file'){const file=item.getAsFile();if(file&&file.type.startsWith('image/')){handleImageFile(file);hideUploadPanel();return;}}}}});window.addEventListener('drop',e=>{e.preventDefault();});window.addEventListener('dragover',e=>{e.preventDefault();});}
-function copyStyle(){if(selectedIndex<0)return;const el=elements[selectedIndex];if(el.type!=='text'){showToast('仅支持文字样式','error');return;}const styleData={stylePreset:el.stylePreset,gradientColor1:el.gradientColor1,gradientColor2:el.gradientColor2,gradientColor3:el.gradientColor3,gradientAngle:el.gradientAngle,gradientSize:el.gradientSize,gradientX:el.gradientX,gradientY:el.gradientY,shadowOffsetX:el.shadowOffsetX,shadowOffsetY:el.shadowOffsetY,shadowSize:el.shadowSize,shadowSpread:el.shadowSpread,shadowColor:el.shadowColor,glowBlur:el.glowBlur,glowColor:el.glowColor,strokeColor1:el.strokeColor1,strokeWidth1:el.strokeWidth1,strokeColor2:el.strokeColor2,strokeWidth2:el.strokeWidth2};localStorage.setItem('styleClipboard',JSON.stringify(styleData));showToast('样式已复制');}
-function pasteStyle(){if(selectedIndex<0)return;const el=elements[selectedIndex];if(el.type!=='text'){showToast('仅支持文字样式','error');return;}const data=localStorage.getItem('styleClipboard');if(!data){showToast('没有可粘贴的样式','error');return;}const styleData=JSON.parse(data);Object.keys(styleData).forEach(key=>{if(key==='rotation')return;el[key]=styleData[key];});el.cache=null;markDirty();updateControls();saveState();showToast('样式已应用');}
+panel.addEventListener('drop',e=>{e.preventDefault();e.stopPropagation();inner.classList.remove('drag-over');const dt=e.dataTransfer;if(dt.files&&dt.files.length){handleImageFile(dt.files[0]);hideUploadPanel();return;}if(dt.items){for(let item of dt.items){if(item.kind==='file'){const file=item.getAsFile();if(file&&file.type.startsWith('image/')){handleImageFile(file);hideUploadPanel();return;}}}}});
+window.addEventListener('drop',e=>{e.preventDefault();});window.addEventListener('dragover',e=>{e.preventDefault();});
+}
+function copyStyle(){const el=getSelectedElement();if(!el||el.type!=='text'){showToast('仅支持文字样式','error');return;}const styleData={stylePreset:el.stylePreset,gradientColor1:el.gradientColor1,gradientColor2:el.gradientColor2,gradientColor3:el.gradientColor3,gradientAngle:el.gradientAngle,gradientSize:el.gradientSize,gradientX:el.gradientX,gradientY:el.gradientY,shadowOffsetX:el.shadowOffsetX,shadowOffsetY:el.shadowOffsetY,shadowSize:el.shadowSize,shadowSpread:el.shadowSpread,shadowColor:el.shadowColor,glowBlur:el.glowBlur,glowColor:el.glowColor,strokeColor1:el.strokeColor1,strokeWidth1:el.strokeWidth1,strokeColor2:el.strokeColor2,strokeWidth2:el.strokeWidth2};localStorage.setItem('styleClipboard',JSON.stringify(styleData));showToast('样式已复制');}
+function pasteStyle(){const el=getSelectedElement();if(!el||el.type!=='text'){showToast('仅支持文字样式','error');return;}const data=localStorage.getItem('styleClipboard');if(!data){showToast('没有可粘贴的样式','error');return;}const styleData=JSON.parse(data);Object.keys(styleData).forEach(key=>{if(key==='rotation')return;el[key]=styleData[key];});el.cache=null;markDirty();updateControls();saveState();showToast('样式已应用');}
 async function pasteFromClipboard(){try{const clipboardItems=await navigator.clipboard.read();for(const item of clipboardItems){for(const type of item.types){if(type.startsWith('image/')){const blob=await item.getType(type);handleImageBlob(blob);hideUploadPanel();return;}}}showToast('剪贴板中没有图片','error');}catch(err){document.addEventListener('paste',function pasteHandler(e){document.removeEventListener('paste',pasteHandler);const items=(e.clipboardData||e.originalEvent.clipboardData).items;for(let item of items){if(item.type.indexOf('image')!==-1){handleImageFile(item.getAsFile());hideUploadPanel();return;}}showToast('剪贴板中没有图片','error');},{once:true});document.execCommand('paste');}}
 function handleImageBlob(blob){const file=new File([blob],'clipboard-image.png',{type:blob.type});handleImageFile(file);}
-function copyLayer(){if(selectedIndex<0)return;const data=JSON.stringify(elements[selectedIndex]);localStorage.setItem('layerClipboard',data);showToast('已复制完整图层');}
-function pasteLayer(){const data=localStorage.getItem('layerClipboard');if(!data){showToast('剪贴板为空，请先复制图层','error');return;}const newLayer=JSON.parse(data);if(!newLayer.type){showToast('数据异常','error');return;}if(newLayer.type==='text'){newLayer.cache=null;}elements.unshift(newLayer);selectedIndex=0;markDirty();updateObjectList();updateControls();saveState();showToast('已粘贴完整图层');}
-function editLayerName(e,index){e.stopPropagation();const span=e.target;const el=elements[index];if(span.tagName==='INPUT')return;const input=document.createElement('input');input.type='text';input.value=el.name||el.text;input.className='layer-nameInput';span.replaceWith(input);input.focus();input.select();input.onblur=save;input.onkeydown=(ev)=>{if(ev.key==='Enter')save();if(ev.key==='Escape')updateObjectList();};function save(){const val=input.value.trim();if(val){el.name=val;}updateObjectList();saveState();}}
+function copyLayer(){const el=getSelectedElement();if(!el)return;const data=JSON.stringify(el);localStorage.setItem('layerClipboard',data);showToast('已复制完整图层');}
+function pasteLayer(){const data=localStorage.getItem('layerClipboard');if(!data){showToast('剪贴板为空，请先复制图层','error');return;}const newLayer=JSON.parse(data);if(!newLayer.type){showToast('数据异常','error');return;}newLayer.isPreset=false;newLayer.locked=false;if(newLayer.type==='text'){newLayer.cache=null;}templateElements.unshift(newLayer);selectedType='template';selectedIndex=0;markDirty();updateObjectList();updateControls();saveState();showToast('已粘贴完整图层');}
+function editLayerName(e,index,type){e.stopPropagation();const span=e.target;const arr=type==='preset'?presetElements:templateElements;const el=arr[index];if(span.tagName==='INPUT')return;const input=document.createElement('input');input.type='text';input.value=el.name||el.text;input.className='layer-nameInput';span.replaceWith(input);input.focus();input.select();input.onblur=save;input.onkeydown=(ev)=>{if(ev.key==='Enter')save();if(ev.key==='Escape')updateObjectList();};function save(){const val=input.value.trim();if(val){el.name=val;}updateObjectList();saveState();}}
 function syncNumber(id){const val=document.getElementById(id).value;document.getElementById(id+'Input').value=val;}
-function updateEffectFromInput(type){if(selectedIndex<0)return;const el=elements[selectedIndex];if(el.type!=='text')return;let val=parseFloat(document.getElementById(type+'Input').value)||0;const limits={gradientAngle:[0,360],gradientSize:[0,500],gradientX:[-200,200],gradientY:[-200,200],glowBlur:[0,100],shadowOffsetX:[-50,50],shadowOffsetY:[-50,50],shadowSize:[0,50],shadowSpread:[0,50]};if(limits[type]){val=Math.max(limits[type][0],Math.min(limits[type][1],val));}el[type]=val;document.getElementById(type).value=val;if(el.type==='text')el.cache=null;markDirty();saveState();}
+function updateEffectFromInput(type){const el=getSelectedElement();if(!el)return;if(el.type!=='text')return;let val=parseFloat(document.getElementById(type+'Input').value)||0;const limits={gradientAngle:[0,360],gradientSize:[0,500],gradientX:[-200,200],gradientY:[-200,200],glowBlur:[0,100],shadowOffsetX:[-50,50],shadowOffsetY:[-50,50],shadowSize:[0,50],shadowSpread:[0,50]};if(limits[type]){val=Math.max(limits[type][0],Math.min(limits[type][1],val));}el[type]=val;document.getElementById(type).value=val;if(el.type==='text')el.cache=null;markDirty();debouncedSaveState();}
 function toggleTextPanel(){const content=document.getElementById('textPanelContent');const icon=document.getElementById('textPanelToggle');if(content.style.display==='none'){content.style.display='block';icon.innerText='▼';}else{content.style.display='none';icon.innerText='▲';}}
 function updateBatchPreview(){const startDate=new Date(document.getElementById('batchStartDate').value);const endDate=new Date(document.getElementById('batchEndDate').value);const count=parseInt(document.getElementById('batchCount').value)||1;if(startDate&&endDate&&!isNaN(startDate.getTime())&&!isNaN(endDate.getTime())){const days=Math.ceil((endDate-startDate)/(1000*60*60*24))+1;document.getElementById('batchPreview').textContent=`将生成 ${days*count} 张 (${days}天)`;}}
 function renderLoop(){if(isDirty){render();isDirty=false;}requestAnimationFrame(renderLoop);}
 function markDirty(){isDirty=true;}
-function render(isTransparent=false){
-ctx.clearRect(0,0,canvasConfig.width,canvasConfig.height);
-if(!isTransparent){
-ctx.fillStyle='#1a1a1a';
-ctx.fillRect(0,0,canvasConfig.width,canvasConfig.height);
-}
-elements.forEach((el,idx)=>{if(el.visible===false)return;ctx.save();ctx.globalAlpha=el.opacity;if(el.type==='text'){renderText(ctx,el);}else if(el.type==='image'||el.type==='imageSlot'){ctx.translate(el.x,el.y);ctx.rotate(el.rotation*Math.PI/180);const w=el.width*(el.scale||1);const h=el.height*(el.scale||1);if(el.img)ctx.drawImage(el.img,-w/2,-h/2,w,h);else if(el.type==='imageSlot'){ctx.fillStyle='#ffffff';ctx.fillRect(-w/2,-h/2,w,h);ctx.strokeStyle='#cccccc';ctx.setLineDash([6,4]);ctx.strokeRect(-w/2,-h/2,w,h);ctx.setLineDash([]);ctx.fillStyle='#999';ctx.font='12px Arial';ctx.textAlign='center';ctx.fillText('点击替换',0,0);}}ctx.restore();if(idx===selectedIndex)drawSelectionBox(el);});}
-function renderText(ctx,el){
-ctx.save();ctx.translate(el.x,el.y);ctx.rotate(el.rotation*Math.PI/180);ctx.textAlign=el.align;ctx.textBaseline='middle';ctx.lineJoin="round";ctx.lineCap="round";
-const fontSize=el.fontSize*el.scale;
-ctx.font=`bold ${fontSize}px 'Noto Sans SC', 'Microsoft YaHei', Arial Narrow`;
-const w=getTextWidth(el);
-const isHuazi=el.stylePreset==='huazi';
-if(isHuazi){
-const shadowOffsetX=el.shadowOffsetX||0,shadowOffsetY=el.shadowOffsetY||4,shadowSize=el.shadowSize||12,shadowSpread=el.shadowSpread||12,shadowColor=el.shadowColor||'rgba(0,0,0,0.85)';
-if(shadowSize>0||shadowOffsetX!==0||shadowOffsetY!==0){
-ctx.save();
-const shadowLayers=Math.min(12,Math.max(6,Math.floor(shadowSize/2)));
-for(let i=shadowLayers;i>=0;i--){
-const layerOffset=i*0.6,alpha=0.3-(i/shadowLayers)*0.25;
-ctx.save();
-// ==== 修复：在循环内部重新设置字体，确保状态不污染 ====
-ctx.font=`bold ${fontSize}px 'Noto Sans SC', 'Microsoft YaHei', Arial Narrow`;
-ctx.textAlign=el.align;
-ctx.textBaseline='middle';
-ctx.globalAlpha=Math.max(0.05,alpha);
-ctx.fillStyle=shadowColor;
-ctx.shadowBlur=0; // 显式重置阴影，避免影响
-ctx.shadowColor='transparent';
-ctx.fillText(el.text,shadowOffsetX+layerOffset,shadowOffsetY+layerOffset);
-ctx.restore();
-}
-if(shadowSpread>0){
-ctx.shadowColor=shadowColor;
-ctx.shadowBlur=shadowSpread;
-ctx.globalAlpha=0.85;
-ctx.fillText(el.text,shadowOffsetX,shadowOffsetY);
-ctx.shadowBlur=0;
-}
-ctx.restore();
-}
-if(el.strokeWidth2>0){
-ctx.lineWidth=el.strokeWidth2;
-ctx.strokeStyle=el.strokeColor2||shadowColor;
-ctx.strokeText(el.text,0,0);
-}
-if(el.strokeWidth1>0){
-ctx.lineWidth=el.strokeWidth1;
-ctx.strokeStyle=el.strokeColor1||el.gradientColor1||'#FFD700';
-ctx.strokeText(el.text,0,0);
-}
-ctx.lineWidth=2;
-ctx.strokeStyle='rgba(255,255,255,0.6)';
-ctx.strokeText(el.text,0,0);
-ctx.globalAlpha=1;
-const preset=textPresetConfig[el.stylePreset]||textPresetConfig.normal;
-const gradColor1=el.gradientColor1||(preset.gradientStops?preset.gradientStops[0].color:'#ffffff');
-const gradColor2=el.gradientColor2||(preset.gradientStops?preset.gradientStops[preset.gradientStops.length-1].color:'#ffffff');
-const gradColor3=el.gradientColor3||gradColor2;
-const angle=(el.gradientAngle||0)*Math.PI/180;const gradSize=(el.gradientSize||100)/100;const gradX=el.gradientX||0;const gradY=el.gradientY||0;
-const baseR=Math.max(w,el.fontSize)*1.5;const r=baseR*gradSize;
-let x1=-Math.cos(angle)*r+gradX,y1=-Math.sin(angle)*r+gradY,x2=Math.cos(angle)*r+gradX,y2=Math.sin(angle)*r+gradY;
-const grad=ctx.createLinearGradient(x1,y1,x2,y2);
-const lightenColor=(color,percent)=>{const hex=color.replace('#','');const r=Math.min(255,parseInt(hex.substr(0,2),16)+percent);const g=Math.min(255,parseInt(hex.substr(2,2),16)+percent);const b=Math.min(255,parseInt(hex.substr(4,2),16)+percent);return`rgb(${r},${g},${b})`;};
-grad.addColorStop(0,gradColor1);
-grad.addColorStop(0.5,lightenColor(gradColor2,40));
-if(el.gradientColor3){grad.addColorStop(1,gradColor3);}else if(preset.gradientStops){preset.gradientStops.forEach(s=>grad.addColorStop(s.pos,s.color));}else{grad.addColorStop(1,gradColor1);}
-ctx.fillStyle=grad;
-ctx.fillText(el.text,0,0);
-ctx.globalAlpha=0.25;ctx.fillStyle="#ffffff";ctx.fillText(el.text,0,-fontSize*0.08);ctx.globalAlpha=1;
-const glowBlur=el.glowBlur||8,glowColor=el.glowColor||'rgba(255,215,0,0.4)';
-if(glowBlur>0){
-ctx.save();
-ctx.shadowColor=glowColor;
-ctx.shadowBlur=glowBlur;
-ctx.globalAlpha=0.6;
-ctx.fillText(el.text,0,0);
-ctx.restore();
-}
-}else{
-if(el.shadowSize>0||el.shadowSpread>0){
-ctx.save();
-const size=el.shadowSize||0,spread=el.shadowSpread||0;
-let sX=el.shadowOffsetX||0,sY=el.shadowOffsetY||0;if(sX===0&&sY===0)sY=2;
-ctx.translate(sX,sY);
-if(size>0){
-const layers=Math.min(size,20);
-for(let i=layers;i>=0;i--){
-const expand=(i/layers)*size,alpha=0.15+(i/layers)*0.1;
-ctx.save();
-ctx.globalAlpha=alpha;
-ctx.translate(expand*0.5,expand*0.5);
-ctx.fillStyle=el.shadowColor||'#000000';
-ctx.fillText(el.text,0,0);
-ctx.restore();
-}
-}
-if(spread>0){
-ctx.shadowColor=el.shadowColor||'#000000';
-ctx.shadowBlur=spread;
-ctx.globalAlpha=0.8;
-ctx.fillText(el.text,0,0);
-ctx.shadowBlur=0;
-}
-ctx.restore();
-}
-if(el.strokeWidth2>0){ctx.lineWidth=el.strokeWidth2;ctx.strokeStyle=el.strokeColor2||'#000';ctx.strokeText(el.text,0,0);}
-if(el.strokeWidth1>0){ctx.lineWidth=el.strokeWidth1;ctx.strokeStyle=el.strokeColor1||'#000';ctx.strokeText(el.text,0,0);}
-ctx.globalAlpha=1;
-const preset2=textPresetConfig[el.stylePreset]||textPresetConfig.normal;
-const g1=el.gradientColor1||(preset2.gradientStops?preset2.gradientStops[0].color:'#ffffff');
-const g2=el.gradientColor2||(preset2.gradientStops?preset2.gradientStops[preset2.gradientStops.length-1].color:'#ffffff');
-const g3=el.gradientColor3||g2;
-const ang=(el.gradientAngle||0)*Math.PI/180;const gS=(el.gradientSize||100)/100;const gX=el.gradientX||0;const gY=el.gradientY||0;
-const bR=Math.max(w,el.fontSize)*1.5;const rad=bR*gS;
-let x1g=-Math.cos(ang)*rad+gX,y1g=-Math.sin(ang)*rad+gY,x2g=Math.cos(ang)*rad+gX,y2g=Math.sin(ang)*rad+gY;
-const g=ctx.createLinearGradient(x1g,y1g,x2g,y2g);g.addColorStop(0,g1);g.addColorStop(0.5,g2);
-if(el.gradientColor3){g.addColorStop(1,g3);}else if(preset2.gradientStops){preset2.gradientStops.forEach(s=>g.addColorStop(s.pos,s.color));}else{g.addColorStop(1,g1);}
-ctx.fillStyle=g;ctx.fillText(el.text,0,0);
-if(el.glowBlur>0){ctx.shadowColor=el.glowColor||'#FFD700';ctx.shadowBlur=el.glowBlur;ctx.fillText(el.text,0,0);ctx.shadowBlur=0;}}
-ctx.restore();}
-function drawSelectionBox(el){
-ctx.save();ctx.translate(el.x,el.y);ctx.rotate(el.rotation*Math.PI/180);let w,h;
-if(el.type==='image'||el.type==='imageSlot'){w=el.width*(el.scale||1);h=el.height*(el.scale||1);}else{w=getTextWidth(el);h=el.cache?el.cache.textHeight:el.fontSize;}
-ctx.strokeStyle=el.locked?'#888':'#D4AF37';ctx.lineWidth=el.locked?1:2;ctx.setLineDash(el.locked?[]:[5,5]);ctx.strokeRect(-w/2-5,-h/2-5,w+10,h+10);ctx.restore();}
+function render(isTransparent=false){ctx.clearRect(0,0,canvasConfig.width,canvasConfig.height);if(!isTransparent){ctx.fillStyle='#1a1a1a';ctx.fillRect(0,0,canvasConfig.width,canvasConfig.height);}templateElements.forEach((el,idx)=>{if(el.visible===false)return;ctx.save();ctx.globalAlpha=el.opacity;if(el.type==='text'){renderText(ctx,el);}else if(el.type==='image'||el.type==='imageSlot'){ctx.translate(el.x,el.y);ctx.rotate(el.rotation*Math.PI/180);const w=el.width*(el.scale||1);const h=el.height*(el.scale||1);if(el.img)ctx.drawImage(el.img,-w/2,-h/2,w,h);else if(el.type==='imageSlot'){ctx.fillStyle='#ffffff';ctx.fillRect(-w/2,-h/2,w,h);ctx.strokeStyle='#cccccc';ctx.setLineDash([6,4]);ctx.strokeRect(-w/2,-h/2,w,h);ctx.setLineDash([]);ctx.fillStyle='#999';ctx.font='12px Arial';ctx.textAlign='center';ctx.fillText('点击替换',0,0);}}ctx.restore();if(selectedType==='template'&&selectedIndex===idx)drawSelectionBox(el);});presetElements.forEach((el,idx)=>{if(el.visible===false)return;ctx.save();ctx.globalAlpha=el.opacity;if(el.type==='text'){renderText(ctx,el);}else if(el.type==='image'){ctx.translate(el.x,el.y);ctx.rotate(el.rotation*Math.PI/180);const w=el.width*(el.scale||1);const h=el.height*(el.scale||1);ctx.drawImage(el.img,-w/2,-h/2,w,h);}ctx.restore();if(selectedType==='preset'&&selectedIndex===idx)drawSelectionBox(el);});}
+function renderText(ctx,el){ctx.save();ctx.translate(el.x,el.y);ctx.rotate(el.rotation*Math.PI/180);ctx.textAlign=el.align;ctx.textBaseline='middle';ctx.lineJoin="round";ctx.lineCap="round";const fontSize=el.fontSize*el.scale;ctx.font=`bold ${fontSize}px 'Noto Sans SC', 'Microsoft YaHei', Arial Narrow`;const w=getTextWidth(el);const isHuazi=el.stylePreset==='huazi';if(isHuazi){const shadowOffsetX=el.shadowOffsetX||0,shadowOffsetY=el.shadowOffsetY||4,shadowSize=el.shadowSize||12,shadowSpread=el.shadowSpread||12,shadowColor=el.shadowColor||'rgba(0,0,0,0.85)';if(shadowSize>0||shadowOffsetX!==0||shadowOffsetY!==0){ctx.save();const shadowLayers=Math.min(12,Math.max(6,Math.floor(shadowSize/2)));for(let i=shadowLayers;i>=0;i--){const layerOffset=i*0.6,alpha=0.3-(i/shadowLayers)*0.25;ctx.save();ctx.font=`bold ${fontSize}px 'Noto Sans SC', 'Microsoft YaHei', Arial Narrow`;ctx.textAlign=el.align;ctx.textBaseline='middle';ctx.globalAlpha=Math.max(0.05,alpha);ctx.fillStyle=shadowColor;ctx.shadowBlur=0;ctx.shadowColor='transparent';ctx.fillText(el.text,shadowOffsetX+layerOffset,shadowOffsetY+layerOffset);ctx.restore();}if(shadowSpread>0){ctx.shadowColor=shadowColor;ctx.shadowBlur=shadowSpread;ctx.globalAlpha=0.85;ctx.fillText(el.text,shadowOffsetX,shadowOffsetY);ctx.shadowBlur=0;}ctx.restore();}if(el.strokeWidth2>0){ctx.lineWidth=el.strokeWidth2;ctx.strokeStyle=el.strokeColor2||shadowColor;ctx.strokeText(el.text,0,0);}if(el.strokeWidth1>0){ctx.lineWidth=el.strokeWidth1;ctx.strokeStyle=el.strokeColor1||el.gradientColor1||'#FFD700';ctx.strokeText(el.text,0,0);}ctx.lineWidth=2;ctx.strokeStyle='rgba(255,255,255,0.6)';ctx.strokeText(el.text,0,0);ctx.globalAlpha=1;const preset=textPresetConfig[el.stylePreset]||textPresetConfig.normal;const gradColor1=el.gradientColor1||(preset.gradientStops?preset.gradientStops[0].color:'#ffffff');const gradColor2=el.gradientColor2||(preset.gradientStops?preset.gradientStops[preset.gradientStops.length-1].color:'#ffffff');const gradColor3=el.gradientColor3||gradColor2;const angle=(el.gradientAngle||0)*Math.PI/180;const gradSize=(el.gradientSize||100)/100;const gradX=el.gradientX||0;const gradY=el.gradientY||0;const baseR=Math.max(w,el.fontSize)*1.5;const r=baseR*gradSize;let x1=-Math.cos(angle)*r+gradX,y1=-Math.sin(angle)*r+gradY,x2=Math.cos(angle)*r+gradX,y2=Math.sin(angle)*r+gradY;const grad=ctx.createLinearGradient(x1,y1,x2,y2);const lightenColor=(color,percent)=>{const hex=color.replace('#','');const r=Math.min(255,parseInt(hex.substr(0,2),16)+percent);const g=Math.min(255,parseInt(hex.substr(2,2),16)+percent);const b=Math.min(255,parseInt(hex.substr(4,2),16)+percent);return`rgb(${r},${g},${b})`;};grad.addColorStop(0,gradColor1);grad.addColorStop(0.5,lightenColor(gradColor2,40));if(el.gradientColor3){grad.addColorStop(1,gradColor3);}else if(preset.gradientStops){preset.gradientStops.forEach(s=>grad.addColorStop(s.pos,s.color));}else{grad.addColorStop(1,gradColor1);}ctx.fillStyle=grad;ctx.fillText(el.text,0,0);ctx.globalAlpha=0.25;ctx.fillStyle="#ffffff";ctx.fillText(el.text,0,-fontSize*0.08);ctx.globalAlpha=1;const glowBlur=el.glowBlur||8,glowColor=el.glowColor||'rgba(255,215,0,0.4)';if(glowBlur>0){ctx.save();ctx.shadowColor=glowColor;ctx.shadowBlur=glowBlur;ctx.globalAlpha=0.6;ctx.fillText(el.text,0,0);ctx.restore();}}else{if(el.shadowSize>0||el.shadowSpread>0){ctx.save();const size=el.shadowSize||0,spread=el.shadowSpread||0;let sX=el.shadowOffsetX||0,sY=el.shadowOffsetY||0;if(sX===0&&sY===0)sY=2;ctx.translate(sX,sY);if(size>0){const layers=Math.min(size,20);for(let i=layers;i>=0;i--){const expand=(i/layers)*size,alpha=0.15+(i/layers)*0.1;ctx.save();ctx.globalAlpha=alpha;ctx.translate(expand*0.5,expand*0.5);ctx.fillStyle=el.shadowColor||'#000000';ctx.fillText(el.text,0,0);ctx.restore();}}if(spread>0){ctx.shadowColor=el.shadowColor||'#000000';ctx.shadowBlur=spread;ctx.globalAlpha=0.8;ctx.fillText(el.text,0,0);ctx.shadowBlur=0;}ctx.restore();}if(el.strokeWidth2>0){ctx.lineWidth=el.strokeWidth2;ctx.strokeStyle=el.strokeColor2||'#000';ctx.strokeText(el.text,0,0);}if(el.strokeWidth1>0){ctx.lineWidth=el.strokeWidth1;ctx.strokeStyle=el.strokeColor1||'#000';ctx.strokeText(el.text,0,0);}ctx.globalAlpha=1;const preset2=textPresetConfig[el.stylePreset]||textPresetConfig.normal;const g1=el.gradientColor1||(preset2.gradientStops?preset2.gradientStops[0].color:'#ffffff');const g2=el.gradientColor2||(preset2.gradientStops?preset2.gradientStops[preset2.gradientStops.length-1].color:'#ffffff');const g3=el.gradientColor3||g2;const ang=(el.gradientAngle||0)*Math.PI/180;const gS=(el.gradientSize||100)/100;const gX=el.gradientX||0;const gY=el.gradientY||0;const bR=Math.max(w,el.fontSize)*1.5;const rad=bR*gS;let x1g=-Math.cos(ang)*rad+gX,y1g=-Math.sin(ang)*rad+gY,x2g=Math.cos(ang)*rad+gX,y2g=Math.sin(ang)*rad+gY;const g=ctx.createLinearGradient(x1g,y1g,x2g,y2g);g.addColorStop(0,g1);g.addColorStop(0.5,g2);if(el.gradientColor3){g.addColorStop(1,g3);}else if(preset2.gradientStops){preset2.gradientStops.forEach(s=>g.addColorStop(s.pos,s.color));}else{g.addColorStop(1,g1);}ctx.fillStyle=g;ctx.fillText(el.text,0,0);if(el.glowBlur>0){ctx.shadowColor=el.glowColor||'#FFD700';ctx.shadowBlur=el.glowBlur;ctx.fillText(el.text,0,0);ctx.shadowBlur=0;}}ctx.restore();}
+function drawSelectionBox(el){ctx.save();ctx.translate(el.x,el.y);ctx.rotate(el.rotation*Math.PI/180);let w,h;if(el.type==='image'||el.type==='imageSlot'){w=el.width*(el.scale||1);h=el.height*(el.scale||1);}else{w=getTextWidth(el);h=el.cache?el.cache.textHeight:el.fontSize;}ctx.strokeStyle=el.locked?'#888':'#D4AF37';ctx.lineWidth=el.locked?1:2;ctx.setLineDash(el.locked?[]:[5,5]);ctx.strokeRect(-w/2-5,-h/2-5,w+10,h+10);ctx.restore();}
 function getTextWidth(el){if(!el.cache||el.cache.fontSize!==el.fontSize){const tempCtx=document.createElement('canvas').getContext('2d');tempCtx.font=`bold ${el.fontSize}px 'Noto Sans SC'`;el.cache={textWidth:tempCtx.measureText(el.text).width,textHeight:el.fontSize,fontSize:el.fontSize};}return el.cache.textWidth;}
 function getPointerPos(e){const rect=canvas.getBoundingClientRect();const scaleX=canvas.width/rect.width,scaleY=canvas.height/rect.height;const clientX=e.touches?e.touches[0].clientX:e.clientX,clientY=e.touches?e.touches[0].clientY:e.clientY;return{x:(clientX-rect.left)*scaleX,y:(clientY-rect.top)*scaleY};}
-canvas.addEventListener('mousedown',handleStart);canvas.addEventListener('touchstart',handleStart,{passive:false});
-canvas.addEventListener('mousemove',handleMove);canvas.addEventListener('touchmove',handleMove,{passive:false});
-canvas.addEventListener('mouseup',handleEnd);canvas.addEventListener('touchend',handleEnd);canvas.addEventListener('mouseleave',handleEnd);
-function handleStart(e){
-if(e.target!==canvas)return;
-const pos=getPointerPos(e);
-let found=false;
-for(let i=elements.length-1;i>=0;i--){const el=elements[i];if(el.visible===false)continue;if(el.type==='imageSlot'){let w=el.width*(el.scale||1),h=el.height*(el.scale||1);if(Math.abs(pos.x-el.x)<w/2&&Math.abs(pos.y-el.y)<h/2){selectedIndex=i;markDirty();updateObjectList();updateControls();showUploadPanel();return;}}}
-for(let i=elements.length-1;i>=0;i--){const el=elements[i];if(el.locked)continue;if(el.visible===false)continue;if(el.type==='imageSlot')continue;let w,h;if(el.type==='image'){w=el.width*(el.scale||1);h=el.height*(el.scale||1);}else{w=getTextWidth(el);h=el.cache?el.cache.textHeight:el.fontSize;}if(Math.abs(pos.x-el.x)<w/2&&Math.abs(pos.y-el.y)<h/2){selectedIndex=i;isDragging=true;dragStart={x:pos.x-el.x,y:pos.y-el.y};found=true;markDirty();updateObjectList();updateControls();break;}}
-if(!found){selectedIndex=-1;markDirty();updateControls();}}
-function handleMove(e){
-if(selectedIndex>=0&&elements[selectedIndex].locked){return;}
-if(selectedIndex<0)return;
-const el=elements[selectedIndex];
-if(el&&el.locked){isDragging=false;canvas.style.cursor='default';return;}
-canvas.style.cursor='move';
-if(!isDragging||selectedIndex<0)return;
-e.preventDefault();
-const pos=getPointerPos(e);
-let el2=elements[selectedIndex];
-let newX=pos.x-dragStart.x,newY=pos.y-dragStart.y;
-let snappedX=false,snappedY=false;
-if(Math.abs(newX-CENTER_X)<SNAP_THRESHOLD){newX=CENTER_X;snappedX=true;}
-if(Math.abs(newY-CENTER_Y)<SNAP_THRESHOLD){newY=CENTER_Y;snappedY=true;}
-el2.x=newX;el2.y=newY;
-const container=document.getElementById('canvasContainer');
-if(snappedX||snappedY){container.classList.add('snap-active');document.getElementById('snapLineV').style.display=snappedX?'block':'none';document.getElementById('snapLineH').style.display=snappedY?'block':'none';}else{container.classList.remove('snap-active');document.getElementById('snapLineV').style.display='none';document.getElementById('snapLineH').style.display='none';}
-markDirty();updateControlsInputsOnly();
-}
-function handleEnd(){if(selectedIndex>=0){const el=elements[selectedIndex];if(el&&el.locked){isDragging=false;canvas.style.cursor='default';return;}}if(isDragging){isDragging=false;document.getElementById('canvasContainer').classList.remove('snap-active');document.getElementById('snapLineV').style.display='none';document.getElementById('snapLineH').style.display='none';saveState();}canvas.style.cursor='move';}
-function updateTransform(source){if(selectedIndex<0)return;const el=elements[selectedIndex];if(el.locked)return;if(el.type==='imageSlot')return;if(source==='posX'||!source){const val=parseFloat(document.getElementById('posX').value)||0;document.getElementById('posXInput').value=val;el.x=val;}if(source==='posY'||!source){const val=parseFloat(document.getElementById('posY').value)||0;document.getElementById('posYInput').value=val;el.y=val;}if(source==='scale'||!source){const val=parseFloat(document.getElementById('scale').value)||100;document.getElementById('scaleInput').value=val;el.scale=val/100;el.cache=null;}if(source==='rotation'||!source){const val=parseFloat(document.getElementById('rotation').value)||0;document.getElementById('rotationInput').value=val;el.rotation=val;}markDirty();}
-function updateTransformFromInput(source){if(selectedIndex<0)return;const el=elements[selectedIndex];if(el.locked)return;if(el.type==='imageSlot')return;let val;if(source==='posX'||!source){val=parseFloat(document.getElementById('posXInput').value)||0;val=Math.max(0,Math.min(600,val));el.x=val;document.getElementById('posX').value=el.x;document.getElementById('posXInput').value=el.x;}if(source==='posY'||!source){val=parseFloat(document.getElementById('posYInput').value)||0;val=Math.max(0,Math.min(800,val));el.y=val;document.getElementById('posY').value=el.y;document.getElementById('posYInput').value=el.y;}if(source==='scale'||!source){val=parseFloat(document.getElementById('scaleInput').value)||100;val=Math.max(1,Math.min(1000,val));el.scale=val/100;document.getElementById('scale').value=val;document.getElementById('scaleInput').value=val;el.cache=null;}if(source==='rotation'||!source){val=parseFloat(document.getElementById('rotationInput').value)||0;val=Math.max(0,Math.min(360,val));el.rotation=val;document.getElementById('rotation').value=val;document.getElementById('rotationInput').value=val;}markDirty();saveState();}
+function getSelectedElement(){if(selectedType==='preset')return presetElements[selectedIndex];if(selectedType==='template')return templateElements[selectedIndex];return null;}
+canvas.addEventListener('mousedown',handleStart);canvas.addEventListener('touchstart',handleStart,{passive:false});canvas.addEventListener('mousemove',handleMove);canvas.addEventListener('touchmove',handleMove,{passive:false});canvas.addEventListener('mouseup',handleEnd);canvas.addEventListener('touchend',handleEnd);canvas.addEventListener('mouseleave',handleEnd);
+function handleStart(e){if(e.target!==canvas)return;const pos=getPointerPos(e);let found=false;for(let i=presetElements.length-1;i>=0;i--){const el=presetElements[i];if(el.visible===false)continue;let w=getTextWidth(el),h=el.cache?el.cache.textHeight:el.fontSize;if(Math.abs(pos.x-el.x)<w/2&&Math.abs(pos.y-el.y)<h/2){selectedType='preset';selectedIndex=i;markDirty();updateObjectList();updateControls();return;}}for(let i=templateElements.length-1;i>=0;i--){const el=templateElements[i];if(el.visible===false)continue;if(el.type==='imageSlot'){let w=el.width*(el.scale||1),h=el.height*(el.scale||1);if(Math.abs(pos.x-el.x)<w/2&&Math.abs(pos.y-el.y)<h/2){selectedType='template';selectedIndex=i;markDirty();updateObjectList();updateControls();showUploadPanel();return;}}if(el.locked)continue;let w,h;if(el.type==='image'){w=el.width*(el.scale||1);h=el.height*(el.scale||1);}else{w=getTextWidth(el);h=el.cache?el.cache.textHeight:el.fontSize;}if(Math.abs(pos.x-el.x)<w/2&&Math.abs(pos.y-el.y)<h/2){selectedType='template';selectedIndex=i;isDragging=true;dragStart={x:pos.x-el.x,y:pos.y-el.y};found=true;markDirty();updateObjectList();updateControls();break;}}if(!found){selectedType='';selectedIndex=-1;markDirty();updateControls();}}
+function handleMove(e){const el=getSelectedElement();if(!el)return;if(el&&el.locked){isDragging=false;canvas.style.cursor='default';return;}canvas.style.cursor='move';if(!isDragging)return;e.preventDefault();const pos=getPointerPos(e);let newX=pos.x-dragStart.x,newY=pos.y-dragStart.y;let snappedX=false,snappedY=false;if(Math.abs(newX-CENTER_X)<SNAP_THRESHOLD){newX=CENTER_X;snappedX=true;}if(Math.abs(newY-CENTER_Y)<SNAP_THRESHOLD){newY=CENTER_Y;snappedY=true;}el.x=newX;el.y=newY;const container=document.getElementById('canvasContainer');if(snappedX||snappedY){container.classList.add('snap-active');document.getElementById('snapLineV').style.display=snappedX?'block':'none';document.getElementById('snapLineH').style.display=snappedY?'block':'none';}else{container.classList.remove('snap-active');document.getElementById('snapLineV').style.display='none';document.getElementById('snapLineH').style.display='none';}markDirty();updateControlsInputsOnly();}
+function handleEnd(){if(isDragging){isDragging=false;document.getElementById('canvasContainer').classList.remove('snap-active');document.getElementById('snapLineV').style.display='none';document.getElementById('snapLineH').style.display='none';saveState();}canvas.style.cursor='move';}
+function updateTransform(source){const el=getSelectedElement();if(!el)return;if(el.locked)return;if(el.type==='imageSlot')return;if(source==='posX'||!source){const val=parseFloat(document.getElementById('posX').value)||0;document.getElementById('posXInput').value=val;el.x=val;}if(source==='posY'||!source){const val=parseFloat(document.getElementById('posY').value)||0;document.getElementById('posYInput').value=val;el.y=val;}if(source==='scale'||!source){const val=parseFloat(document.getElementById('scale').value)||100;document.getElementById('scaleInput').value=val;el.scale=val/100;el.cache=null;}if(source==='rotation'||!source){const val=parseFloat(document.getElementById('rotation').value)||0;document.getElementById('rotationInput').value=val;el.rotation=val;}markDirty();}
+function updateTransformFromInput(source){const el=getSelectedElement();if(!el)return;if(el.locked)return;if(el.type==='imageSlot')return;let val;if(source==='posX'||!source){val=parseFloat(document.getElementById('posXInput').value)||0;val=Math.max(0,Math.min(600,val));el.x=val;document.getElementById('posX').value=el.x;document.getElementById('posXInput').value=el.x;}if(source==='posY'||!source){val=parseFloat(document.getElementById('posYInput').value)||0;val=Math.max(0,Math.min(800,val));el.y=val;document.getElementById('posY').value=el.y;document.getElementById('posYInput').value=el.y;}if(source==='scale'||!source){val=parseFloat(document.getElementById('scaleInput').value)||100;val=Math.max(1,Math.min(1000,val));el.scale=val/100;document.getElementById('scale').value=val;document.getElementById('scaleInput').value=val;el.cache=null;}if(source==='rotation'||!source){val=parseFloat(document.getElementById('rotationInput').value)||0;val=Math.max(0,Math.min(360,val));el.rotation=val;document.getElementById('rotation').value=val;document.getElementById('rotationInput').value=val;}markDirty();saveState();}
 function inputSyncSlider(source){const inputId=source+'Input';let slider=document.getElementById(source);if(!slider){if(source==='posXB')slider=document.getElementById('posX');else if(source==='posYB')slider=document.getElementById('posY');else if(source==='scaleB')slider=document.getElementById('scale');else if(source==='fontSizeB')slider=document.getElementById('fontSize');}if(slider){const val=document.getElementById(inputId).value;slider.value=val;}}
-function updateControlsInputsOnly(){if(selectedIndex<0)return;const el=elements[selectedIndex];document.getElementById('posX').value=el.x;document.getElementById('posXInput').value=Math.round(el.x);document.getElementById('posY').value=el.y;document.getElementById('posYInput').value=Math.round(el.y);}
-function updateControls(){
-const idx=selectedIndex;const el=idx>=0?elements[idx]:null;
-const infoTxt=el?`${el.type==='text'?'📝':'🖼️'} ${el.name||el.text||el.type} ${el.locked?'🔒':''}`:'未选中任何元素';
-document.getElementById('selectedInfo').textContent=infoTxt;
-const showTrans=idx>=0;
-document.getElementById('transformControls').style.display=showTrans?'block':'none';
-if(!el)return;
-const isLocked=el.locked,isImageSlot=el.type==='imageSlot';
-document.getElementById('lockedHint').style.display=(isLocked&&!isImageSlot)?'block':'none';
-document.querySelectorAll('#transformControls input').forEach(i=>i.disabled=isLocked||isImageSlot);
-document.querySelectorAll('#transformControls button').forEach(b=>b.disabled=isLocked||isImageSlot);
-document.getElementById('textContentInput').disabled=false;
-const isText=el.type==='text';
-document.getElementById('textContentRow').style.display=isText?'block':'none';
-document.getElementById('textContentInput').value=el.text||'';
-if(isText){
-document.getElementById('textControls').style.display='block';
-document.getElementById('fontSize').value=el.fontSize;document.getElementById('fontSizeInput').value=el.fontSize;
-document.getElementById('gradientColor1').value=el.gradientColor1||'#D4AF37';document.getElementById('gradientColor2').value=el.gradientColor2||'#F4E5BC';document.getElementById('gradientColor3').value=el.gradientColor3||'#000000';
-document.getElementById('gradientAngle').value=el.gradientAngle||0;document.getElementById('gradientAngleInput').value=el.gradientAngle||0;
-document.getElementById('gradientSize').value=el.gradientSize||100;document.getElementById('gradientSizeInput').value=el.gradientSize||100;
-document.getElementById('gradientX').value=el.gradientX||0;document.getElementById('gradientXInput').value=el.gradientX||0;
-document.getElementById('gradientY').value=el.gradientY||0;document.getElementById('gradientYInput').value=el.gradientY||0;
-document.getElementById('shadowOffsetX').value=el.shadowOffsetX||0;document.getElementById('shadowOffsetXInput').value=el.shadowOffsetX||0;
-document.getElementById('shadowOffsetY').value=el.shadowOffsetY||0;document.getElementById('shadowOffsetYInput').value=el.shadowOffsetY||0;
-document.getElementById('shadowSize').value=el.shadowSize||0;document.getElementById('shadowSizeInput').value=el.shadowSize||0;
-document.getElementById('shadowSpread').value=el.shadowSpread||0;document.getElementById('shadowSpreadInput').value=el.shadowSpread||0;
-document.getElementById('shadowColor').value=el.shadowColor||'#000000';
-document.getElementById('glowBlur').value=el.glowBlur||0;document.getElementById('glowBlurInput').value=el.glowBlur||0;
-document.getElementById('glowColor').value=el.glowColor||'#FFD700';
-document.getElementById('strokeColor1').value=el.strokeColor1||'#000000';document.getElementById('strokeWidth1').value=el.strokeWidth1||0;
-document.getElementById('strokeColor2').value=el.strokeColor2||'#000000';document.getElementById('strokeWidth2').value=el.strokeWidth2||0;
-document.getElementById('fontSize').disabled=false;document.getElementById('fontSizeInput').disabled=false;
-['gradientColor1','gradientColor2','gradientColor3','gradientAngle','gradientSize','gradientX','gradientY','shadowOffsetX','shadowOffsetY','shadowSize','shadowSpread','shadowColor','glowBlur','glowColor','strokeColor1','strokeWidth1','strokeColor2','strokeWidth2'].forEach(id=>{document.getElementById(id).disabled=false;});
-['shadowOffsetXInput','shadowOffsetYInput','shadowSizeInput','shadowSpreadInput','gradientAngleInput','gradientSizeInput','gradientXInput','gradientYInput','glowBlurInput'].forEach(id=>{document.getElementById(id).disabled=false;});
-['gold_basic','vip_gold','red_fire','blue_neon','purple_glow','white_glass'].forEach(p=>{const btn=document.getElementById('preset_'+p);if(btn){btn.disabled=false;}});
-['gold_basic','vip_gold','red_fire','blue_neon','purple_glow','white_glass'].forEach(p=>{const btn=document.getElementById('preset_'+p);if(btn)btn.classList.toggle('active',el.stylePreset===p);});
-}else{document.getElementById('textControls').style.display='none';}
-document.getElementById('posX').value=el.x;document.getElementById('posXInput').value=Math.round(el.x);
-document.getElementById('posY').value=el.y;document.getElementById('posYInput').value=Math.round(el.y);
-document.getElementById('scale').value=el.scale*100;document.getElementById('scaleInput').value=Math.round(el.scale*100);
-document.getElementById('rotation').value=el.rotation;document.getElementById('rotationInput').value=Math.round(el.rotation);
-}
-function updateTextContent(){if(selectedIndex<0)return;const el=elements[selectedIndex];if(el.type!=='text')return;el.text=document.getElementById('textContentInput').value;el.cache=null;markDirty();updateObjectList();}
-function updateEffect(type){if(selectedIndex<0)return;const el=elements[selectedIndex];if(el.type!=='text')return;const val=parseFloat(document.getElementById(type).value)||0;el[type]=val;markDirty();}
-function updateEffectColor(type){if(selectedIndex<0)return;const el=elements[selectedIndex];if(el.type!=='text')return;el[type]=document.getElementById(type).value;markDirty();}
-function updateGradientColor(type){if(selectedIndex<0)return;const el=elements[selectedIndex];if(el.type!=='text')return;if(type===1)el.gradientColor1=document.getElementById('gradientColor1').value;if(type===2)el.gradientColor2=document.getElementById('gradientColor2').value;if(type===3)el.gradientColor3=document.getElementById('gradientColor3').value;markDirty();}
-function updateText(source){if(selectedIndex<0)return;const el=elements[selectedIndex];if(el.type!=='text')return;let val=parseInt(document.getElementById('fontSize').value);el.fontSize=val;el.cache=null;document.getElementById('fontSizeInput').value=val;markDirty();}
-function updateTextFromInput(source){if(selectedIndex<0)return;const el=elements[selectedIndex];if(el.type!=='text')return;let val=parseInt(document.getElementById('fontSizeInput').value)||48;val=Math.max(12,Math.min(200,val));el.fontSize=val;el.cache=null;document.getElementById('fontSize').value=val;document.getElementById('fontSizeInput').value=val;markDirty();saveState();}
-function setStylePreset(preset){if(selectedIndex<0||elements[selectedIndex].type!=='text')return;const el=elements[selectedIndex];el.stylePreset=preset;const config=textPresetConfig[preset];if(config){if(config.gradientStops){el.gradientColor1=config.gradientStops[0].color;el.gradientColor2=config.gradientStops[Math.floor(config.gradientStops.length/2)].color;el.gradientColor3=null;el.gradientAngle=0;el.gradientSize=config.gradientSize||100;el.gradientX=config.gradientX||0;el.gradientY=config.gradientY||0;}else{el.gradientSize=config.gradientSize||100;el.gradientX=config.gradientX||0;el.gradientY=config.gradientY||0;}if(config.glow){el.glowColor=config.glow.color;el.glowBlur=config.glow.blur;}else{el.glowBlur=0;}if(config.outerStroke&&config.outerStroke.length>=2){el.strokeColor2=config.outerStroke[0].color;el.strokeWidth2=config.outerStroke[0].width;el.strokeColor1=config.outerStroke[1].color;el.strokeWidth1=config.outerStroke[1].width;}else{el.strokeWidth1=0;el.strokeWidth2=0;}if(config.shadow){el.shadowOffsetX=config.shadow.offsetX;el.shadowOffsetY=config.shadow.offsetY;el.shadowSize=config.shadow.size;el.shadowSpread=config.shadow.spread;}else{el.shadowOffsetX=0;el.shadowOffsetY=0;el.shadowSize=0;el.shadowSpread=0;}}el.cache=null;markDirty();updateControls();saveState();showToast('样式已切换');}
-function deleteSelected(){if(selectedIndex>=0){elements.splice(selectedIndex,1);selectedIndex=-1;markDirty();updateObjectList();updateControls();saveState();showToast('已删除');}}
-function moveLayer(d){if(selectedIndex<0)return;const n=selectedIndex+d;if(n<0||n>=elements.length)return;const t=elements[selectedIndex];elements[selectedIndex]=elements[n];elements[n]=t;selectedIndex=n;markDirty();updateObjectList();updateControls();saveState();}
-function updateObjectList(){
-const list=document.getElementById('objectList');list.innerHTML='';
-for(let i=elements.length-1;i>=0;i--){const el=elements[i];const div=document.createElement('div');div.className=`object-item ${i===selectedIndex?'selected':''} ${el.locked?'locked-item':''} ${!el.visible?'hidden-item':''}`;const displayName=el.type==='text'&&el.name?.includes('标题')?el.text:(el.name||el.text);div.innerHTML=`<div class="object-info"><button class="eye-btn" onclick="elements[${i}].visible=!elements[${i}].visible;markDirty();updateObjectList();updateControls();">👁</button><button class="lock-btn ${el.locked?'locked':''}" onclick="elements[${i}].locked=!elements[${i}].locked;markDirty();updateObjectList();updateControls();">🔒</button><span class="layer-name" ondblclick="editLayerName(event, ${i})">${displayName}</span></div><button class="delete-btn" onclick="elements.splice(${i},1);selectedIndex=-1;markDirty();updateObjectList();updateControls();saveState();">×</button>`;div.onclick=(e)=>{if(e.target.tagName==='INPUT')return;if(e.target.classList.contains('layer-nameInput'))return;if(e.target.tagName!=='BUTTON'){selectedIndex=i;markDirty();updateObjectList();updateControls();}};list.appendChild(div);}
-}
-function addAdSlots(){elements.unshift({type:'imageSlot',name:'游戏商',width:235,height:169,x:canvasConfig.width-235/2-15,y:15+169/2,img:null,imgData:null,scale:1,rotation:0,opacity:1,locked:false,visible:true});elements.unshift({type:'imageSlot',name:'游戏',width:235,height:235,x:canvasConfig.width-235/2-15,y:15+169+15+235/2,img:null,imgData:null,scale:1,rotation:0,opacity:1,locked:false,visible:true});selectedIndex=-1;markDirty();updateObjectList();updateControls();saveState();showToast('已添加广告位');}
-function addTitle(){const el={type:'text',text:'标题文字',fontSize:48,color:'#D4AF37',align:'center',x:canvasConfig.width/2,y:200,rotation:0,opacity:1,stylePreset:'normal',name:'标题',gradientColor1:'#D4AF37',gradientColor2:'#D4AF37',gradientColor3:null,gradientAngle:0,gradientSize:100,gradientX:0,gradientY:0,shadowOffsetX:0,shadowOffsetY:0,shadowSize:0,shadowSpread:0,shadowColor:'#000000',glowBlur:0,glowColor:'#FFD700',strokeColor1:'#000000',strokeWidth1:0,strokeColor2:'#000000',strokeWidth2:0,locked:false,visible:true,cache:null};elements.unshift(el);selectedIndex=0;markDirty();updateObjectList();updateControls();saveState();showToast('标题添加成功');}
+function updateControlsInputsOnly(){const el=getSelectedElement();if(!el)return;document.getElementById('posX').value=el.x;document.getElementById('posXInput').value=Math.round(el.x);document.getElementById('posY').value=el.y;document.getElementById('posYInput').value=Math.round(el.y);}
+function updateControls(){const el=getSelectedElement();const infoTxt=el?`${el.type==='text'?'📝':'🖼️'} ${el.name||el.text||el.type} ${el.locked?'🔒':''}`:'未选中任何元素';document.getElementById('selectedInfo').textContent=infoTxt;const showTrans=!!el;document.getElementById('transformControls').style.display=showTrans?'block':'none';if(!el)return;const isLocked=el.locked,isImageSlot=el.type==='imageSlot';document.getElementById('lockedHint').style.display=(isLocked&&!isImageSlot)?'block':'none';document.querySelectorAll('#transformControls input').forEach(i=>i.disabled=isLocked||isImageSlot);document.querySelectorAll('#transformControls button').forEach(b=>b.disabled=isLocked||isImageSlot);document.getElementById('textContentInput').disabled=false;const isText=el.type==='text';document.getElementById('textContentRow').style.display=isText?'block':'none';document.getElementById('textContentInput').value=el.text||'';if(isText){document.getElementById('textControls').style.display='block';document.getElementById('fontSize').value=el.fontSize;document.getElementById('fontSizeInput').value=el.fontSize;document.getElementById('gradientColor1').value=el.gradientColor1||'#D4AF37';document.getElementById('gradientColor2').value=el.gradientColor2||'#F4E5BC';document.getElementById('gradientColor3').value=el.gradientColor3||'#000000';document.getElementById('gradientAngle').value=el.gradientAngle||0;document.getElementById('gradientAngleInput').value=el.gradientAngle||0;document.getElementById('gradientSize').value=el.gradientSize||100;document.getElementById('gradientSizeInput').value=el.gradientSize||100;document.getElementById('gradientX').value=el.gradientX||0;document.getElementById('gradientXInput').value=el.gradientX||0;document.getElementById('gradientY').value=el.gradientY||0;document.getElementById('gradientYInput').value=el.gradientY||0;document.getElementById('shadowOffsetX').value=el.shadowOffsetX||0;document.getElementById('shadowOffsetXInput').value=el.shadowOffsetX||0;document.getElementById('shadowOffsetY').value=el.shadowOffsetY||0;document.getElementById('shadowOffsetYInput').value=el.shadowOffsetY||0;document.getElementById('shadowSize').value=el.shadowSize||0;document.getElementById('shadowSizeInput').value=el.shadowSize||0;document.getElementById('shadowSpread').value=el.shadowSpread||0;document.getElementById('shadowSpreadInput').value=el.shadowSpread||0;document.getElementById('shadowColor').value=el.shadowColor||'#000000';document.getElementById('glowBlur').value=el.glowBlur||0;document.getElementById('glowBlurInput').value=el.glowBlur||0;document.getElementById('glowColor').value=el.glowColor||'#FFD700';document.getElementById('strokeColor1').value=el.strokeColor1||'#000000';document.getElementById('strokeWidth1').value=el.strokeWidth1||0;document.getElementById('strokeColor2').value=el.strokeColor2||'#000000';document.getElementById('strokeWidth2').value=el.strokeWidth2||0;['gradientColor1','gradientColor2','gradientColor3','gradientAngle','gradientSize','gradientX','gradientY','shadowOffsetX','shadowOffsetY','shadowSize','shadowSpread','shadowColor','glowBlur','glowColor','strokeColor1','strokeWidth1','strokeColor2','strokeWidth2'].forEach(id=>{document.getElementById(id).disabled=false;});['gold_basic','vip_gold','red_fire','blue_neon','purple_glow','white_glass'].forEach(p=>{const btn=document.getElementById('preset_'+p);if(btn)btn.classList.toggle('active',el.stylePreset===p);});document.getElementById('align_left').classList.toggle('active',el.align==='left');document.getElementById('align_center').classList.toggle('active',el.align==='center');document.getElementById('align_right').classList.toggle('active',el.align==='right');}else{document.getElementById('textControls').style.display='none';}document.getElementById('posX').value=el.x;document.getElementById('posXInput').value=Math.round(el.x);document.getElementById('posY').value=el.y;document.getElementById('posYInput').value=Math.round(el.y);document.getElementById('scale').value=el.scale*100;document.getElementById('scaleInput').value=Math.round(el.scale*100);document.getElementById('rotation').value=el.rotation;document.getElementById('rotationInput').value=Math.round(el.rotation);}
+function updateTextContent(){const el=getSelectedElement();if(!el)return;if(el.type!=='text')return;el.text=document.getElementById('textContentInput').value;el.cache=null;markDirty();updateObjectList();debouncedSaveState();}
+function updateEffect(type){const el=getSelectedElement();if(!el)return;if(el.type!=='text')return;const val=parseFloat(document.getElementById(type).value)||0;el[type]=val;markDirty();debouncedSaveState();}
+function updateEffectColor(type){const el=getSelectedElement();if(!el)return;if(el.type!=='text')return;el[type]=document.getElementById(type).value;markDirty();debouncedSaveState();}
+function updateGradientColor(type){const el=getSelectedElement();if(!el)return;if(el.type!=='text')return;if(type===1)el.gradientColor1=document.getElementById('gradientColor1').value;if(type===2)el.gradientColor2=document.getElementById('gradientColor2').value;if(type===3)el.gradientColor3=document.getElementById('gradientColor3').value;markDirty();debouncedSaveState();}
+function updateText(source){const el=getSelectedElement();if(!el)return;if(el.type!=='text')return;let val=parseInt(document.getElementById('fontSize').value);el.fontSize=val;el.cache=null;document.getElementById('fontSizeInput').value=val;markDirty();debouncedSaveState();}
+function updateTextFromInput(source){const el=getSelectedElement();if(!el)return;if(el.type!=='text')return;let val=parseInt(document.getElementById('fontSizeInput').value)||48;val=Math.max(12,Math.min(200,val));el.fontSize=val;el.cache=null;document.getElementById('fontSize').value=val;document.getElementById('fontSizeInput').value=val;markDirty();saveState();}
+function setTextAlign(align){const el=getSelectedElement();if(!el)return;if(el.type!=='text')return;el.align=align;el.cache=null;markDirty();updateControls();saveState();showToast('对齐已切换');}
+function setStylePreset(preset){const el=getSelectedElement();if(!el)return;if(el.type!=='text')return;el.stylePreset=preset;const config=textPresetConfig[preset];if(config){if(config.gradientStops){el.gradientColor1=config.gradientStops[0].color;el.gradientColor2=config.gradientStops[Math.floor(config.gradientStops.length/2)].color;el.gradientColor3=null;el.gradientAngle=0;el.gradientSize=config.gradientSize||100;el.gradientX=config.gradientX||0;el.gradientY=config.gradientY||0;}else{el.gradientSize=config.gradientSize||100;el.gradientX=config.gradientX||0;el.gradientY=config.gradientY||0;}if(config.glow){el.glowColor=config.glow.color;el.glowBlur=config.glow.blur;}else{el.glowBlur=0;}if(config.outerStroke&&config.outerStroke.length>=2){el.strokeColor2=config.outerStroke[0].color;el.strokeWidth2=config.outerStroke[0].width;el.strokeColor1=config.outerStroke[1].color;el.strokeWidth1=config.outerStroke[1].width;}else{el.strokeWidth1=0;el.strokeWidth2=0;}if(config.shadow){el.shadowOffsetX=config.shadow.offsetX;el.shadowOffsetY=config.shadow.offsetY;el.shadowSize=config.shadow.size;el.shadowSpread=config.shadow.spread;}else{el.shadowOffsetX=0;el.shadowOffsetY=0;el.shadowSize=0;el.shadowSpread=0;}}el.cache=null;markDirty();updateControls();saveState();showToast('样式已切换');}
+function deleteSelected(){const el=getSelectedElement();if(!el)return;if(selectedType==='preset'){showToast('预设图层无法删除','error');return;}templateElements.splice(selectedIndex,1);selectedIndex=-1;selectedType='';markDirty();updateObjectList();updateControls();saveState();showToast('已删除');}
+function moveLayer(d){if(selectedIndex<0||!selectedType)return;const arr=selectedType==='preset'?presetElements:templateElements;const n=selectedIndex+d;if(n<0||n>=arr.length)return;const t=arr[selectedIndex];arr[selectedIndex]=arr[n];arr[n]=t;selectedIndex=n;markDirty();updateObjectList();updateControls();saveState();}
+function updateObjectList(){const presetList=document.getElementById('presetLayerList');presetList.innerHTML='';presetElements.forEach((el,idx)=>{const div=document.createElement('div');div.className=`object-item preset-item ${selectedType==='preset'&&selectedIndex===idx?'selected':''} ${el.locked?'locked-item':''} ${!el.visible?'hidden-item':''}`;const displayName=el.name||el.text;div.innerHTML=`<div class="object-info"><button class="eye-btn ${!el.visible?'hidden-eye':''}" onclick="event.stopPropagation();togglePresetVisibility(${idx});">👁</button><button class="lock-btn ${el.locked?'locked':''}" onclick="event.stopPropagation();togglePresetLock(${idx});">🔒</button><span class="layer-name" ondblclick="editLayerName(event, ${idx}, 'preset')">${displayName}</span></div><button class="delete-btn" onclick="event.stopPropagation();deletePresetLayer(${idx});">×</button>`;div.onclick=(e)=>{if(e.target.tagName==='INPUT')return;selectedType='preset';selectedIndex=idx;markDirty();updateObjectList();updateControls();};presetList.appendChild(div);});const list=document.getElementById('objectList');list.innerHTML='';templateElements.slice().reverse().forEach((el,idx)=>{const realIdx=templateElements.length-1-idx;const div=document.createElement('div');div.className=`object-item ${selectedType==='template'&&selectedIndex===realIdx?'selected':''} ${el.locked?'locked-item':''} ${!el.visible?'hidden-item':''}`;const displayName=el.type==='text'&&el.name?.includes('标题')?el.text:(el.name||el.text);div.innerHTML=`<div class="object-info"><button class="eye-btn ${!el.visible?'hidden-eye':''}" onclick="event.stopPropagation();toggleTemplateVisibility(${realIdx});">👁</button><button class="lock-btn ${el.locked?'locked':''}" onclick="event.stopPropagation();toggleTemplateLock(${realIdx});">🔒</button><span class="layer-name" ondblclick="editLayerName(event, ${realIdx}, 'template')">${displayName}</span></div><button class="delete-btn" onclick="event.stopPropagation();templateElements.splice(${realIdx},1);selectedIndex=-1;selectedType='';markDirty();updateObjectList();updateControls();saveState();">×</button>`;div.onclick=(e)=>{if(e.target.tagName==='INPUT')return;if(e.target.classList.contains('layer-nameInput'))return;if(e.target.tagName!=='BUTTON'){selectedType='template';selectedIndex=realIdx;markDirty();updateObjectList();updateControls();}};list.appendChild(div);});}
+function togglePresetVisibility(idx){presetElements[idx].visible=!presetElements[idx].visible;markDirty();updateObjectList();updateControls();saveState();}
+function togglePresetLock(idx){presetElements[idx].locked=!presetElements[idx].locked;markDirty();updateObjectList();updateControls();saveState();}
+function toggleTemplateVisibility(idx){templateElements[idx].visible=!templateElements[idx].visible;markDirty();updateObjectList();updateControls();saveState();}
+function toggleTemplateLock(idx){templateElements[idx].locked=!templateElements[idx].locked;markDirty();updateObjectList();updateControls();saveState();}
+function deletePresetLayer(idx){if(presetElements.length<=1){showToast('至少保留一个预设图层','error');return;}presetElements.splice(idx,1);selectedIndex=-1;selectedType='';markDirty();updateObjectList();updateControls();saveState();showToast('预设图层已删除');}
+function addAdSlots(){templateElements.unshift({type:'imageSlot',name:'游戏商',width:235,height:169,x:canvasConfig.width-235/2-15,y:15+169/2,img:null,imgData:null,scale:1,rotation:0,opacity:1,locked:false,visible:true});templateElements.unshift({type:'imageSlot',name:'游戏',width:235,height:235,x:canvasConfig.width-235/2-15,y:15+169+15+235/2,img:null,imgData:null,scale:1,rotation:0,opacity:1,locked:false,visible:true});selectedIndex=-1;selectedType='';markDirty();updateObjectList();updateControls();saveState();showToast('已添加广告位');}
+function addTitle(){const el={type:'text',text:'标题文字',fontSize:48,color:'#D4AF37',align:'center',x:canvasConfig.width/2,y:200,rotation:0,opacity:1,stylePreset:'normal',name:'标题',gradientColor1:'#D4AF37',gradientColor2:'#D4AF37',gradientColor3:null,gradientAngle:0,gradientSize:100,gradientX:0,gradientY:0,shadowOffsetX:0,shadowOffsetY:0,shadowSize:0,shadowSpread:0,shadowColor:'#000000',glowBlur:0,glowColor:'#FFD700',strokeColor1:'#000000',strokeWidth1:0,strokeColor2:'#000000',strokeWidth2:0,locked:false,visible:true,cache:null};templateElements.unshift(el);selectedType='template';selectedIndex=0;markDirty();updateObjectList();updateControls();saveState();showToast('标题添加成功');}
 function handleImgUpload(e){if(e.target.files[0]){handleImageFile(e.target.files[0]);hideUploadPanel();}}
-function handleImageFile(file){const reader=new FileReader();reader.onload=e=>{const img=new Image();img.onload=()=>{if(selectedIndex>=0&&elements[selectedIndex].type==='imageSlot'){elements[selectedIndex].img=img;elements[selectedIndex].imgData=imageToDataURL(img);markDirty();updateControls();saveState();showToast('图片已替换');return;}const scale=Math.max(canvasConfig.width/img.width,canvasConfig.height/img.height);const el={type:'image',img:img,imgData:imageToDataURL(img),x:canvasConfig.width/2,y:canvasConfig.height/2,width:img.width*scale,height:img.height*scale,scale:1,rotation:0,opacity:1,name:file.name.replace(/\.[^/.]+$/,'').substring(0,15)||'图片',locked:false,visible:true};elements.unshift(el);selectedIndex=0;markDirty();updateObjectList();updateControls();saveState();showToast('图片添加成功');};img.src=e.target.result;};reader.readAsDataURL(file);}
+function handleImageFile(file){const reader=new FileReader();reader.onload=e=>{const img=new Image();img.onload=()=>{if(selectedType==='template'&&selectedIndex>=0&&templateElements[selectedIndex].type==='imageSlot'){templateElements[selectedIndex].img=img;templateElements[selectedIndex].imgData=imageToDataURL(img);markDirty();updateControls();saveState();showToast('图片已替换');return;}const scale=Math.max(canvasConfig.width/img.width,canvasConfig.height/img.height);const el={type:'image',img:img,imgData:imageToDataURL(img),x:canvasConfig.width/2,y:canvasConfig.height/2,width:img.width*scale,height:img.height*scale,scale:1,rotation:0,opacity:1,name:file.name.replace(/\.[^/.]+$/,'').substring(0,15)||'图片',locked:false,visible:true};templateElements.unshift(el);selectedType='template';selectedIndex=0;markDirty();updateObjectList();updateControls();saveState();showToast('图片添加成功');};img.src=e.target.result;};reader.readAsDataURL(file);}
 function imageToDataURL(img){const t=document.createElement('canvas');t.width=img.width;t.height=img.height;t.getContext('2d').drawImage(img,0,0);return t.toDataURL('image/png');}
 function dataURLToImage(dataURL){return new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.src=dataURL;});}
 function handlePaste(e){const items=(e.clipboardData||e.originalEvent.clipboardData).items;for(let item of items){if(item.type.indexOf('image')!==-1){handleImageFile(item.getAsFile());break;}}}
-function serializeElements(){return JSON.stringify(elements.map(e=>{const o={...e};if(o.img){o.imgData=imageToDataURL(o.img);delete o.img;}return o;}));}
-async function deserializeElements(json){const arr=JSON.parse(json);for(let el of arr){if(el.imgData){el.img=await dataURLToImage(el.imgData);}if(el.type==='text')el.cache=null;}return arr;}
+function serializeElements(){return JSON.stringify({preset:presetElements.map(e=>{const o={...e};if(o.img){o.imgData=imageToDataURL(o.img);delete o.img;}return o;}),template:templateElements.map(e=>{const o={...e};if(o.img){o.imgData=imageToDataURL(o.img);delete o.img;}return o;})});}
+async function deserializeElements(json){const data=JSON.parse(json);templateElements=[];for(let el of data.template||[]){if(el.imgData){el.img=await dataURLToImage(el.imgData);}if(el.type==='text')el.cache=null;templateElements.push(el);}if(data.preset){presetElements=data.preset.map(async el=>{if(el.imgData){el.img=await dataURLToImage(el.imgData);}if(el.type==='text')el.cache=null;return el;});}}
 function saveState(){const state=serializeElements();if(historyIndex<history.length-1)history=history.slice(0,historyIndex+1);history.push(state);if(history.length>MAX_HISTORY)history.shift();historyIndex=history.length-1;updateUndoRedoButtons();}
 async function undo(){if(historyIndex>0){historyIndex--;await restoreState(history[historyIndex]);}}
 async function redo(){if(historyIndex<history.length-1){historyIndex++;await restoreState(history[historyIndex]);}}
-async function restoreState(json){const newEls=await deserializeElements(json);elements=newEls;selectedIndex=-1;markDirty();updateObjectList();updateControls();updateUndoRedoButtons();}
+async function restoreState(json){const data=JSON.parse(json);templateElements=[];for(let el of data.template||[]){if(el.imgData){el.img=await dataURLToImage(el.imgData);}if(el.type==='text')el.cache=null;templateElements.push(el);}if(data.preset){presetElements=[];for(let el of data.preset||[]){if(el.imgData){el.img=await dataURLToImage(el.imgData);}if(el.type==='text')el.cache=null;presetElements.push(el);}}selectedIndex=-1;selectedType='';markDirty();updateObjectList();updateControls();updateUndoRedoButtons();}
 function updateUndoRedoButtons(){document.getElementById('undoBtn').disabled=historyIndex<=0;document.getElementById('redoBtn').disabled=historyIndex>=history.length-1;}
-function exportProject(){const d={version:'1.0',elements:elements.map(e=>{const b={type:e.type,x:e.x,y:e.y,scale:e.scale,rotation:e.rotation,opacity:e.opacity,name:e.name,locked:e.locked,visible:e.visible};if(e.type==='image'||e.type==='imageSlot'){b.imgData=e.imgData;b.width=e.width;b.height=e.height;}else if(e.type==='text'){b.text=e.text;b.fontSize=e.fontSize;b.color=e.color;b.align=e.align;b.stylePreset=e.stylePreset;b.gradientColor1=e.gradientColor1;b.gradientColor2=e.gradientColor2;b.gradientColor3=e.gradientColor3;b.gradientAngle=e.gradientAngle;b.gradientSize=e.gradientSize;b.gradientX=e.gradientX;b.gradientY=e.gradientY;b.shadowOffsetX=e.shadowOffsetX;b.shadowOffsetY=e.shadowOffsetY;b.shadowSize=e.shadowSize;b.shadowSpread=e.shadowSpread;b.shadowColor=e.shadowColor;b.glowBlur=e.glowBlur;b.glowColor=e.glowColor;b.strokeColor1=e.strokeColor1;b.strokeWidth1=e.strokeWidth1;b.strokeColor2=e.strokeColor2;b.strokeWidth2=e.strokeWidth2;}return b;})};const b=new Blob([JSON.stringify(d)],{type:'application/json'});const a=document.createElement('a');a.download='poster-project.json';a.href=URL.createObjectURL(b);a.click();showToast('项目已导出');}
-async function importProject(evt){const f=evt.target.files[0];if(!f)return;const r=new FileReader();r.onload=async e=>{try{const data=JSON.parse(e.target.result);elements=[];for(const ed of data.elements){if(ed.type==='image'||ed.type==='imageSlot'){const img=ed.imgData?await dataURLToImage(ed.imgData):null;elements.push({...ed,img});}else{elements.push({...ed,cache:null});}}selectedIndex=-1;markDirty();updateObjectList();updateControls();saveState();showToast('项目导入成功');}catch(err){console.error(err);showToast('导入失败');}};r.readAsText(f);}
-function exportCanvasToBase64(transparent){
-const ec=document.createElement('canvas');
-const scale=2;
-ec.width=600*scale;ec.height=800*scale;
-const ectx=ec.getContext('2d');
-// ====== 修复：导出时添加关键设置 ======
-ectx.imageSmoothingEnabled = true;
-ectx.imageSmoothingQuality = 'high';
-ectx.textBaseline = 'alphabetic'; // 关键：防止文字基线偏移导致阴影跑偏
-// =======================================
-ectx.scale(scale,scale);
-if(!transparent){
-ectx.fillStyle='#1a1a1a';
-ectx.fillRect(0,0,600,800);
-}
-elements.forEach(el=>{if(el.visible===false)return;ectx.save();ectx.globalAlpha=el.opacity;if(el.type==='text')renderText(ectx,el);else if(el.img){ectx.translate(el.x,el.y);ectx.rotate(el.rotation*Math.PI/180);const w=el.width*(el.scale||1),h=el.height*(el.scale||1);ectx.drawImage(el.img,-w/2,-h/2,w,h);}ectx.restore();});
-return ec.toDataURL('image/png');
-}
+function exportProject(){const d={version:'1.0',template:templateElements.map(e=>{const b={type:e.type,x:e.x,y:e.y,scale:e.scale,rotation:e.rotation,opacity:e.opacity,name:e.name,locked:e.locked,visible:e.visible,align:e.align};if(e.type==='image'||e.type==='imageSlot'){b.imgData=e.imgData;b.width=e.width;b.height=e.height;}else if(e.type==='text'){b.text=e.text;b.fontSize=e.fontSize;b.color=e.color;b.stylePreset=e.stylePreset;b.gradientColor1=e.gradientColor1;b.gradientColor2=e.gradientColor2;b.gradientColor3=e.gradientColor3;b.gradientAngle=e.gradientAngle;b.gradientSize=e.gradientSize;b.gradientX=e.gradientX;b.gradientY=e.gradientY;b.shadowOffsetX=e.shadowOffsetX;b.shadowOffsetY=e.shadowOffsetY;b.shadowSize=e.shadowSize;b.shadowSpread=e.shadowSpread;b.shadowColor=e.shadowColor;b.glowBlur=e.glowBlur;b.glowColor=e.glowColor;b.strokeColor1=e.strokeColor1;b.strokeWidth1=e.strokeWidth1;b.strokeColor2=e.strokeColor2;b.strokeWidth2=e.strokeWidth2;}return b;})};const b=new Blob([JSON.stringify(d)],{type:'application/json'});const a=document.createElement('a');a.download='poster-project.json';a.href=URL.createObjectURL(b);a.click();showToast('项目已导出');}
+async function importProject(evt){const f=evt.target.files[0];if(!f)return;const r=new FileReader();r.onload=async e=>{try{const data=JSON.parse(e.target.result);templateElements=[];for(const ed of data.elements||data.template||[]){if(ed.type==='image'||ed.type==='imageSlot'){const img=ed.imgData?await dataURLToImage(ed.imgData):null;templateElements.push({...ed,img});}else{templateElements.push({...ed,cache:null});}}presetElements=createPresetElements();selectedIndex=-1;selectedType='';markDirty();updateObjectList();updateControls();saveState();showToast('项目导入成功');}catch(err){console.error(err);showToast('导入失败');}};r.readAsText(f);}
+function exportCanvasToBase64(transparent){const ec=document.createElement('canvas');const scale=2;ec.width=600*scale;ec.height=800*scale;const ectx=ec.getContext('2d');ectx.imageSmoothingEnabled=true;ectx.imageSmoothingQuality='high';ectx.textBaseline='alphabetic';ectx.scale(scale,scale);if(!transparent){ectx.fillStyle='#1a1a1a';ectx.fillRect(0,0,600,800);}templateElements.forEach(el=>{if(el.visible===false)return;ectx.save();ectx.globalAlpha=el.opacity;if(el.type==='text')renderText(ectx,el);else if(el.img){ectx.translate(el.x,el.y);ectx.rotate(el.rotation*Math.PI/180);const w=el.width*(el.scale||1),h=el.height*(el.scale||1);ectx.drawImage(el.img,-w/2,-h/2,w,h);}ectx.restore();});presetElements.forEach(el=>{if(el.visible===false)return;ectx.save();ectx.globalAlpha=el.opacity;if(el.type==='text')renderText(ectx,el);else if(el.img){ectx.translate(el.x,el.y);ectx.rotate(el.rotation*Math.PI/180);const w=el.width*(el.scale||1),h=el.height*(el.scale||1);ectx.drawImage(el.img,-w/2,-h/2,w,h);}ectx.restore();});return ec.toDataURL('image/png');}
 function exportCanvas(transparent){const dataURL=exportCanvasToBase64(transparent);const a=document.createElement('a');a.download=transparent?'poster-t.png':'poster.png';a.href=dataURL;a.click();showToast('已导出PNG');}
 function showUploadPanel(){document.getElementById('uploadPanel').classList.add('show');}
 function hideUploadPanel(){document.getElementById('uploadPanel').classList.remove('show');}
 function showToast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show '+type;setTimeout(()=>t.classList.remove('show'),2000);}
 function toggleLayout(){const ws=document.getElementById('workspace');if(layoutMode==='side'){layoutMode='bottom';ws.classList.add('layout-bottom');}else{layoutMode='side';ws.classList.remove('layout-bottom');}showToast(layoutMode==='bottom'?'已切换到底部模式':'已切换到侧边模式');}
-async function batchGenerate(){
-const start=new Date(document.getElementById('batchStartDate').value);
-const end=new Date(document.getElementById('batchEndDate').value);
-const count=parseInt(document.getElementById('batchCount').value)||1;
-if(isNaN(start)||isNaN(end)){showToast('请选择日期','error');return;}
-if(start>end){showToast('开始日期不能晚于结束日期','error');return;}
-const dateEl=elements.find(el=>el.name==='日期');
-const amountEl=elements.find(el=>el.name==='金额');
-const titleEl=elements.find(el=>el.name==='标题');
-if(!dateEl||!amountEl||!titleEl){showToast('模板中缺少必要的图层（日期、金额、标题）','error');return;}
-const zip=new JSZip();
-const overlay=document.getElementById('loadingOverlay');overlay.classList.add('show');
-const progressEl=document.getElementById('loadingProgress');
-let current=new Date(start);let totalGenerated=0;
-try{
-while(current<=end){
-for(let i=0;i<count;i++){
-let tempElements=JSON.parse(JSON.stringify(elements));
-const amount=getRandomAmount();
-const time=getRandomTime();
-const dateStr=current.toISOString().slice(0,10);
-tempElements.forEach(el=>{if(el.name==='日期'){el.text=`${dateStr} ${time}`;el.cache=null;}if(el.name==='金额'){el.text=`MYR ${formatAmount(amount)}`;el.cache=null;}if(el.name==='标题'){el.text=`RM ${formatTitle(amount)}`;el.cache=null;}});
-const backup=elements;
-elements=tempElements;
-render(true);
-await new Promise(resolve=>setTimeout(resolve,10));
-const blob=await new Promise(resolve=>{canvas.toBlob(resolve,'image/png');});
-const filename=`${dateStr}_${time.replace(':','-')}_${amount}.png`;
-zip.file(filename,blob);
-elements=backup;
-totalGenerated++;
-progressEl.textContent=`${totalGenerated} 张已生成 (透明PNG)`;
-}
-current.setDate(current.getDate()+1);
-}
-progressEl.textContent='正在打包...';
-const content=await zip.generateAsync({type:'blob'});
-const a=document.createElement('a');a.href=URL.createObjectURL(content);a.download='batch_images.zip';a.click();
-showToast(`已生成并下载 ${totalGenerated} 张透明PNG`,'success');
-}catch(err){console.error(err);showToast('生成失败: '+err.message,'error');}finally{overlay.classList.remove('show');render();}
-}
+async function batchGenerate(){const start=new Date(document.getElementById('batchStartDate').value);const end=new Date(document.getElementById('batchEndDate').value);const count=parseInt(document.getElementById('batchCount').value)||1;if(isNaN(start)||isNaN(end)){showToast('请选择日期','error');return;}if(start>end){showToast('开始日期不能晚于结束日期','error');return;}const zip=new JSZip();const overlay=document.getElementById('loadingOverlay');overlay.classList.add('show');const progressEl=document.getElementById('loadingProgress');let current=new Date(start);let totalGenerated=0;try{while(current<=end){for(let i=0;i<count;i++){const tempTemplate=JSON.parse(JSON.stringify(templateElements));const tempPreset=JSON.parse(JSON.stringify(presetElements));const amount=getRandomAmount();const timeStr=getRandomTime24();const dateStr=current.toISOString().slice(0,10);tempPreset.forEach(el=>{if(el.name==='标题'){el.text=`RM ${formatTitle(amount)}`;el.cache=null;}if(el.name==='金额'){if(currentTemplateMode==='custom'){el.text=formatTitle(amount)+'.00';}else{el.text=`MYR ${formatAmount(amount)}`;}el.cache=null;}if(el.name==='日期'){if(currentTemplateMode==='custom'){el.text=formatDateDMY(current);}else{const time12=to12HourFormat(parseInt(timeStr.split(':')[0])%12||12,parseInt(timeStr.split(':')[1]));el.text=`${dateStr} ${time12}`;}el.cache=null;}if(el.name==='时间'&&currentTemplateMode==='custom'){el.text=timeStr;el.cache=null;}});const backupTemplate=templateElements;const backupPreset=presetElements;templateElements=tempTemplate;presetElements=tempPreset;render(true);await new Promise(resolve=>setTimeout(resolve,10));const blob=await new Promise(resolve=>{canvas.toBlob(resolve,'image/png');});let filename;if(currentTemplateMode==='custom'){filename=`${current.toISOString().slice(0,10).replace(/-/g,'')}_${timeStr.replace(/:/g,'')}-${formatTitle(amount)}.png`;}else{filename=`${dateStr}_${timeStr.replace(':','-').replace(' ','')}-${amount}.png`;}zip.file(filename,blob);templateElements=backupTemplate;presetElements=backupPreset;totalGenerated++;progressEl.textContent=`${totalGenerated} 张已生成 (透明PNG)`;}current.setDate(current.getDate()+1);}progressEl.textContent='正在打包...';const content=await zip.generateAsync({type:'blob'});const a=document.createElement('a');a.href=URL.createObjectURL(content);a.download='batch_images.zip';a.click();showToast(`已生成并下载 ${totalGenerated} 张透明PNG`,'success');}catch(err){console.error(err);showToast('生成失败: '+err.message,'error');}finally{overlay.classList.remove('show');render();}}
 init();
 </script>
 </body>
