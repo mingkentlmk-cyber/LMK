@@ -370,11 +370,13 @@ const w=el.width*(el.scale||1);
 const h=el.height*(el.scale||1);
 ctx.drawImage(el.img,-w/2,-h/2,w,h);
 }else if(el.type==='imageSlot'){
-// 渲染白色占位框（和预览一致）
 ctx.translate(el.x,el.y);
 ctx.rotate(el.rotation*Math.PI/180);
 const w=el.width*(el.scale||1);
 const h=el.height*(el.scale||1);
+if(el.img){
+    ctx.drawImage(el.img,-w/2,-h/2,w,h);
+}else{
 ctx.fillStyle='#ffffff';
 ctx.fillRect(-w/2,-h/2,w,h);
 ctx.strokeStyle='#cccccc';
@@ -385,6 +387,7 @@ ctx.fillStyle='#999';
 ctx.font='12px Arial';
 ctx.textAlign='center';
 ctx.fillText('点击替换',0,0);
+}
 }
 ctx.restore();
 });
@@ -1211,21 +1214,26 @@ if(el.type==='text'){
     const h=el.height*(el.scale||1);
     ectx.drawImage(el.img,-w/2,-h/2,w,h);
 }else if(el.type==='imageSlot'){
-    // 渲染白色占位框（与预览完全一致）
+    // 渲染 imageSlot
     ectx.translate(el.x,el.y);
     ectx.rotate(el.rotation*Math.PI/180);
     const w=el.width*(el.scale||1);
     const h=el.height*(el.scale||1);
-    ectx.fillStyle='#ffffff';
-    ectx.fillRect(-w/2,-h/2,w,h);
-    ectx.strokeStyle='#cccccc';
-    ectx.setLineDash([6,4]);
-    ectx.strokeRect(-w/2,-h/2,w,h);
-    ectx.setLineDash([]);
-    ectx.fillStyle='#999';
-    ectx.font='12px Arial';
-    ectx.textAlign='center';
-    ectx.fillText('点击替换',0,0);
+    if(el.img){
+        ectx.drawImage(el.img,-w/2,-h/2,w,h);
+    }else{
+        // 渲染白色占位框（与预览完全一致）
+        ectx.fillStyle='#ffffff';
+        ectx.fillRect(-w/2,-h/2,w,h);
+        ectx.strokeStyle='#cccccc';
+        ectx.setLineDash([6,4]);
+        ectx.strokeRect(-w/2,-h/2,w,h);
+        ectx.setLineDash([]);
+        ectx.fillStyle='#999';
+        ectx.font='12px Arial';
+        ectx.textAlign='center';
+        ectx.fillText('点击替换',0,0);
+    }
 }
 ectx.restore();
 });
